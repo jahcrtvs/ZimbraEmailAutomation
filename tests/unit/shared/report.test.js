@@ -14,7 +14,7 @@ describe("polish", () => {
     expect(polish("tomorrow continue repository", "plans")).toBe("Continue work on the repository.");
     expect(polish("- finish embedded id mapping", "plans")).toBe("Finish the embedded ID mapping.");
     expect(polish("   ", "tasks")).toBeNull();
-    expect(polish("â€¢ ", "tasks")).toBeNull();
+    expect(polish("• ", "tasks")).toBeNull();
   });
   it("does not double punctuation", () => {
     expect(polish("fixed the bug!", "tasks")).toBe("Fixed the bug!");

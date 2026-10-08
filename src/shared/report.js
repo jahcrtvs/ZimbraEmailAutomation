@@ -34,7 +34,7 @@ const dict = { hibernate: "Hibernate", criteria: "Criteria", api: "API", hql: "H
 const verbs = /^(worked|fixed|continued|studied|implemented|investigating|reviewed|learned|wrote|created|updated|tested|finish|continue|start|review|write|refactor|refactored|attended|set up|added)\b/i;
 
 export function polish(line, kind) {
-  let s = line.trim().replace(/^(?:[-*]|â€¢)\s*/, "");
+  let s = line.trim().replace(/^[-•*]\s*/, "");
   if (!s) return null;
   s = s.replace(/^tomorrow\s+/i, "");
   s = s.replace(/criteria query/i, "criteria API queries").replace(/duplicate result\b/i, "duplicate query results");
@@ -73,7 +73,7 @@ export function render(template, vars) {
   let cur = null;
   template.split(/\r?\n/).forEach(raw => {
     const l = raw.trim();
-    if (!l || /^[â”€-]{3,}$/.test(l)) return;
+    if (!l || /^[─-]{3,}$/.test(l)) return;
     const v = l.match(/^\{(\w+)\}$/);
     if (v && Array.isArray(vars[v[1]])) { if (cur) cur.items.push(...vars[v[1]]); return; }
     if (!/[{}]/.test(l) && l === l.toUpperCase() && /[A-Z]/.test(l)) { cur = { type: "section", title: l, items: [] }; blocks.push(cur); return; }

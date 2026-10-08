@@ -1,0 +1,6 @@
+html,body,#root{height:100%;margin:0;overflow:hidden}
+.hrow:hover{background:var(--ink-4)!important}
+a{color:var(--orange-400)}a:hover{color:var(--orange-500)}
+button:focus-visible,[role="button"]:focus-visible,.hrow:focus-visible,a:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+.app-drag{-webkit-app-region:drag}
+.app-nodrag{-webkit-app-region:no-drag}

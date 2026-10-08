@@ -58,7 +58,7 @@ function StatusPanel({s,a}){
 }
 export function Steps({title,steps,step}){
   const {Icon}=D();
-  return <div style={{display:"flex",flexDirection:"column",gap:14}}>
+  return <div aria-live="polite" style={{display:"flex",flexDirection:"column",gap:14}}>
     {title&&<div style={{font:"600 15px/1.3 var(--font-sans)",marginBottom:4}}>{title}</div>}
     {steps.map((t,i)=><div key={t} style={{display:"flex",alignItems:"center",gap:10,color:i<step?"var(--fg-2)":i===step?"var(--fg-1)":"var(--fg-3)"}}>
       <span style={{width:18,display:"flex",justifyContent:"center",color:i<step?"var(--status-success)":"var(--fg-2)",animation:i===step?"dd-spin .9s linear infinite":"none"}}><Icon name={i<step?"check":i===step?"loader-circle":"circle"} size={i<=step?16:8} strokeWidth={i<step?2.5:1.75}/></span>{t}</div>)}

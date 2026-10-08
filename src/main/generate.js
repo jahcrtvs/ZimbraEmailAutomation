@@ -7,12 +7,15 @@ export const GROQ_MODEL = "openai/gpt-oss-120b";
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const ENDPOINT =id => `https://generativelanguage.googleapis.com/v1beta/models/${id}:generateContent`;
 
-const PROMPT = `You turn rough daily work notes into short report bullets for a manager.
+const PROMPT = `You rewrite a trainee developer's rough daily notes as the bullets of a status email to their manager.
+Write the way a careful, plain-spoken colleague would write it by hand, not the way an AI assistant would.
 Rules:
-- One sentence per item, ending with a period.
-- Work done: past tense ("Worked on ...", "Fixed ..."). Study topics: "Studied ...". Plans: imperative ("Continue work on ...").
-- Fix capitalisation of technical names (Hibernate, HQL, API, SQL, JDBC, ID).
-- Never invent facts. Never merge unrelated items. Skip empty input.
+- One short sentence per item, ending with a period. Start with the verb. Use simple, concrete wording.
+- Work done: past tense ("Worked on ...", "Fixed ...", "Finished ..."). Study topics: "Studied ...". Plans: imperative ("Continue ...", "Finish ...").
+- Fix grammar, spelling and capitalisation of technical names (Hibernate, HQL, API, SQL, JDBC, ID, ORM, Java).
+- Keep the writer's own terms and meaning. If a note is terse or ambiguous, stay close to its original words instead of guessing what it means or inventing detail.
+- Never add facts, results, reasons or outcomes that are not in the notes. Never merge unrelated items. Skip empty input.
+- Avoid filler and AI-sounding style: no "successfully", "effectively", "comprehensive", "robust", "leveraged", "delved", "ensured", "furthermore", "additionally", no em dashes, no semicolons, no exclamation marks, no marketing or inflated tone, no trailing summary clauses.
 Return ONLY JSON with exactly these keys, each an array of strings:
 {"tasks":[],"topics":[],"weekly_plans":[],"blockers":[]}
 - tasks: from "Today's Work" plus anything under "Still Working On" (phrase those as "Still working on: ...", or "Investigating ..." / "Continued ...").

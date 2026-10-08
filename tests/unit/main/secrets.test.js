@@ -36,6 +36,25 @@ describe("secrets", () => {
     fs.writeFileSync(path.join(dir, "gemini.key"), "junk");
     expect(createSecrets(dir, safe).getKey()).toBeNull();
   });
+  it("stores each provider's key separately and independently", () => {
+    const s = createSecrets(dir, fakeSafe());
+    s.setKey("gem-key");
+    expect(s.hasKey("groq")).toBe(false);
+    s.setKey("groq-key", "groq");
+    expect(s.getKey("groq")).toBe("groq-key");
+    expect(s.getKey("gemini")).toBe("gem-key");
+    expect(s.getKey()).toBe("gem-key");
+    expect(fs.existsSync(path.join(dir, "groq.key"))).toBe(true);
+    expect(fs.readFileSync(path.join(dir, "groq.key"), "utf8")).not.toContain("groq-key");
+    s.clearKey("groq");
+    expect(s.hasKey("groq")).toBe(false);
+    expect(s.hasKey("gemini")).toBe(true);
+  });
+  it("rejects unknown providers", () => {
+    const s = createSecrets(dir, fakeSafe());
+    expect(() => s.setKey("k", "../evil")).toThrow(/provider/i);
+    expect(() => s.getKey("openai")).toThrow(/provider/i);
+  });
   it("ignores an empty key", () => {
     const s = createSecrets(dir, fakeSafe());
     s.setKey("   ");

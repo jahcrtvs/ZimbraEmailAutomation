@@ -11,7 +11,7 @@ const initial = () => ({
   page: "new", stage: "form", notes: { ...EMPTY_NOTES }, today: new Date(), date: new Date(), blocks: [], draft: {},
   digestStatus: "none", schedule: { date: new Date(), time: "5:00 PM", to: "" }, items: [], modal: null, zimbra: false, toast: null,
   genAt: null, savedAt: null, sentAt: null, history: [], historySel: null, template: DEFAULT_TEMPLATE,
-  settings: null, hasKey: false, genStep: 0, prepStep: 0, testing: false, testingAI: false, curId: null, genError: null, modalDetails: null
+  settings: null, hasKey: false, genStep: 0, prepStep: 0, testing: false, testingAI: false, curId: null, genError: null, modalDetails: null, modalCode: null
 });
 
 export function useApp() {
@@ -77,7 +77,7 @@ export function useApp() {
       toast("Email prepared in Zimbra.");
       return true;
     } catch (e) {
-      up({ modal: { t: e.code === "LOGIN" ? "login" : "zerr" }, modalDetails: e.message, zimbra: e.code === "LOGIN" ? false : ref.current.zimbra });
+      up({ modal: { t: e.code === "LOGIN" ? "login" : "zerr" }, modalDetails: e.message, modalCode: e.code, zimbra: e.code === "LOGIN" ? false : ref.current.zimbra });
       return false;
     }
   }
@@ -137,11 +137,11 @@ export function useApp() {
     openSend: () => up({ modal: { t: "send" } }),
     async confirmSend() {
       const c = ref.current;
-      if (!c.zimbra) { try { const r = await api().zimbra.check(c.settings.zimbra.url); up({ zimbra: r === "connected" }); if (r !== "connected") { up({ modal: { t: "login" } }); return; } } catch (e) { up({ modal: { t: "zerr" }, modalDetails: e.message }); return; } }
+      if (!c.zimbra) { try { const r = await api().zimbra.check(c.settings.zimbra.url); up({ zimbra: r === "connected" }); if (r !== "connected") { up({ modal: { t: "login" } }); return; } } catch (e) { up({ modal: { t: "zerr" }, modalDetails: e.message, modalCode: e.code }); return; } }
       await runPrepare({ to: c.schedule.to, subj: subject(c), blocks: c.blocks, forCur: true });
     },
-    async loginZimbra() { up({ modal: null }); toast("Opening Zimbra in your browser…", "info"); try { await api().zimbra.open(ref.current.settings.zimbra.url); } catch (e) { up({ modal: { t: "zerr" }, modalDetails: e.message }); } },
-    async retryZimbra() { up({ modal: null, testing: true }); try { const r = await api().zimbra.check(ref.current.settings.zimbra.url); up({ testing: false, zimbra: r === "connected", modal: { t: "send" } }); } catch (e) { up({ testing: false, modal: { t: "zerr" }, modalDetails: e.message }); } },
+    async loginZimbra() { up({ modal: null }); toast("Opening Zimbra in your browser…", "info"); try { await api().zimbra.open(ref.current.settings.zimbra.url); } catch (e) { up({ modal: { t: "zerr" }, modalDetails: e.message, modalCode: e.code }); } },
+    async retryZimbra() { up({ modal: null, testing: true }); try { const r = await api().zimbra.check(ref.current.settings.zimbra.url); up({ testing: false, zimbra: r === "connected", modal: { t: "send" } }); } catch (e) { up({ testing: false, modal: { t: "zerr" }, modalDetails: e.message, modalCode: e.code }); } },
     async testZimbra() {
       up({ testing: true });
       try { const r = await api().zimbra.check(ref.current.settings.zimbra.url); up({ testing: false, zimbra: r === "connected" }); toast(r === "connected" ? "Zimbra connection OK." : "Zimbra login required.", r === "connected" ? "success" : "warning"); }

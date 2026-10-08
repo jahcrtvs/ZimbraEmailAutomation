@@ -71,7 +71,7 @@ describe("generate with Groq", () => {
     expect(seen.init.headers.Authorization).toBe("Bearer GKEY");
     const body = JSON.parse(seen.init.body);
     expect(body.model).toBe(GROQ_MODEL);
-    expect(GROQ_MODEL).toBe("llama-3.3-70b-versatile");
+    expect(GROQ_MODEL).toBe("openai/gpt-oss-120b");
     expect(body.temperature).toBe(0.2);
     expect(body.response_format).toEqual({ type: "json_object" });
     expect(body.messages).toHaveLength(1);

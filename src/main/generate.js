@@ -3,7 +3,7 @@ import { fromISODate } from "../shared/time.js";
 
 export const MODEL_IDS = { flash: "gemini-3.7-flash", pro: "gemini-pro-latest" };
 // Unverified against Groq's current model list.
-export const GROQ_MODEL = "llama-3.3-70b-versatile";
+export const GROQ_MODEL = "openai/gpt-oss-120b";
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const ENDPOINT =id => `https://generativelanguage.googleapis.com/v1beta/models/${id}:generateContent`;
 

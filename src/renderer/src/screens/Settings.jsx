@@ -10,7 +10,7 @@ export function SettingsScreen({s,a}){
   const [p,setP]=React.useState({
     name:s.settings.profile.name,role:s.settings.profile.role,
     to:s.settings.email.defaultRecipient,subject:s.settings.email.defaultSubject,
-    time:s.settings.general.defaultSendTime,model:s.settings.ai.model,url:s.settings.zimbra.url,apiKey:""});
+    time:s.settings.general.defaultSendTime,provider:s.settings.ai.provider,model:s.settings.ai.model,url:s.settings.zimbra.url,apiKey:""});
   const [tried,setTried]=React.useState(false);
   const badTo=!isValidEmail(p.to),badUrl=!validUrl(p.url);
   const save=()=>{
@@ -21,7 +21,7 @@ export function SettingsScreen({s,a}){
       profile:{name:p.name,role:p.role},
       email:{defaultRecipient:p.to,defaultSubject:p.subject},
       zimbra:{url:p.url},
-      ai:{...s.settings.ai,model:p.model}}});
+      ai:{...s.settings.ai,provider:p.provider,model:p.model}}});
     setP(x=>({...x,apiKey:""}));
   };
   React.useEffect(()=>{window.__ddSaveSettings=save;return()=>{delete window.__ddSaveSettings;};});
@@ -38,8 +38,8 @@ export function SettingsScreen({s,a}){
         <div style={{display:"flex",gap:8}}><Button variant="outline" iconRight="external-link" onClick={a.openZimbra}>Open Zimbra</Button><Button loading={s.testing} onClick={a.testZimbra}>Test Connection</Button></div></div>
         <p style={{margin:"14px 0 0",font:"var(--text-helper)",color:"var(--fg-3)"}}>Daily Digest prepares emails in Zimbra and never presses Send.</p>
       </Card>
-      <Card title="AI Provider" subtitle="Used to organize notes into the report"><div style={row}><Input label="Provider" value="Gemini" readOnly/><Select label="Model" value={p.model} onChange={set("model")} options={[{value:"flash",label:"Flash"},{value:"pro",label:"Pro"}]}/></div>
-        <div style={{marginTop:14}}><Input label="API key" type="password" value={p.apiKey} onChange={v=>setP({...p,apiKey:v})} placeholder={s.hasKey?"Saved":"Paste your key"} helper="Stored encrypted on this computer."/></div>
+      <Card title="AI Provider" subtitle="Used to organize notes into the report"><div style={row}><Select label="Provider" value={p.provider} onChange={v=>setP({...p,provider:v,apiKey:""})} options={[{value:"gemini",label:"Gemini"},{value:"groq",label:"Groq"}]}/>{p.provider==="gemini"&&<Select label="Model" value={p.model} onChange={set("model")} options={[{value:"flash",label:"Flash"},{value:"pro",label:"Pro"}]}/>}</div>
+        <div style={{marginTop:14}}><Input label="API key" type="password" value={p.apiKey} onChange={v=>setP({...p,apiKey:v})} placeholder={s.hasKey[p.provider]?"Saved":"Paste your key"} helper="Stored encrypted on this computer."/></div>
         <div style={{marginTop:14}}><Button variant="outline" loading={s.testingAI} onClick={a.testAI}>Test Connection</Button></div></Card>
     </div></div>
   </div>;

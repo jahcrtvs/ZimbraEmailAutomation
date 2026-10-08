@@ -24,7 +24,7 @@ else {
     const dir = app.getPath("userData");
     const store = createStore(dir);
     const secrets = createSecrets(dir, safeStorage);
-    const generator = createGenerator({ getKey: () => secrets.getKey() });
+    const generator = createGenerator({ getKey: p => secrets.getKey(p) });
     const send = (ch, payload) => { if (win && !win.isDestroyed()) win.webContents.send(ch, payload); };
     const zimbra = process.env.DD_TEST
       ? createFakeZimbra(dir)

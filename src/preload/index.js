@@ -19,8 +19,8 @@ contextBridge.exposeInMainWorld("api", {
     onChanged: on("schedule:changed")
   },
   generate: p => call("ai:generate", p),
-  testAI: model => call("ai:test", model),
-  setApiKey: key => call("ai:setKey", key),
+  testAI: (model, provider) => call("ai:test", model, provider),
+  setApiKey: (key, provider) => call("ai:setKey", key, provider),
   zimbra: {
     check: url => call("zimbra:check", url),
     prepare: p => call("zimbra:prepare", p),

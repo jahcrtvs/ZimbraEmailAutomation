@@ -11,7 +11,7 @@ const initial = () => ({
   page: "new", stage: "form", notes: { ...EMPTY_NOTES }, today: new Date(), date: new Date(), blocks: [], draft: {},
   digestStatus: "none", schedule: { date: new Date(), time: "5:00 PM", to: "" }, items: [], modal: null, zimbra: false, toast: null,
   genAt: null, savedAt: null, sentAt: null, history: [], historySel: null, template: DEFAULT_TEMPLATE,
-  settings: null, hasKey: false, genStep: 0, prepStep: 0, testing: false, testingAI: false, curId: null, genError: null, modalDetails: null, modalCode: null
+  settings: null, hasKey: { gemini: false, groq: false }, genStep: 0, prepStep: 0, testing: false, testingAI: false, curId: null, genError: null, modalDetails: null, modalCode: null
 });
 
 export function useApp() {
@@ -97,7 +97,7 @@ export function useApp() {
       later(() => up({ genStep: 1 }), 600);
       later(() => up({ genStep: 2 }), 1200);
       try {
-        const blocks = await api().generate({ notes: c.notes, template: c.template, profile: c.settings.profile, date: toISODate(c.date), model: c.settings.ai.model });
+        const blocks = await api().generate({ notes: c.notes, template: c.template, profile: c.settings.profile, date: toISODate(c.date), model: c.settings.ai.model, provider: c.settings.ai.provider });
         if (id !== genId.current) return;
         clear();
         up({ stage: "review", blocks, digestStatus: "ready", savedAt: null, genAt: formatTime(new Date()) });
@@ -168,13 +168,13 @@ export function useApp() {
     saveTemplate: tpl => { up({ template: tpl }); api().store.save("template", { ...{ id: "daily-digest", name: "Daily Digest" }, body: tpl, variables: ["date", "name", "role", "tasks", "topics", "weekly_plans", "blockers", "tomorrow"] }); toast("Template saved."); },
     async saveSettings({ settings, apiKey }) {
       await api().store.save("settings", settings);
-      if (apiKey && apiKey.trim()) { await api().setApiKey(apiKey); up({ hasKey: true }); }
+      if (apiKey && apiKey.trim()) { const prov = settings.ai.provider; await api().setApiKey(apiKey, prov); up(p => ({ hasKey: { ...p.hasKey, [prov]: true } })); }
       up(p => ({ settings, schedule: p.digestStatus === "scheduled" ? p.schedule : { ...p.schedule, to: settings.email.defaultRecipient, time: settings.general.defaultSendTime } }));
       toast("Settings saved.");
     },
     async testAI() {
       up({ testingAI: true });
-      try { await api().testAI(ref.current.settings.ai.model); toast("Connection OK."); }
+      try { await api().testAI(ref.current.settings.ai.model, ref.current.settings.ai.provider); toast("Connection OK."); }
       catch (e) { toast("Unable to connect: " + e.message, "danger"); }
       up({ testingAI: false });
     }

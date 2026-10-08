@@ -47,6 +47,29 @@ describe("ipc", () => {
     expect((await call("zimbra:check", "file:///etc/passwd")).ok).toBe(false);
     expect((await call("zimbra:prepare", { url: "javascript:alert(1)", to: "a@b.co", subject: "s", body: "b" })).ok).toBe(false);
   });
+  it("reports per-provider hasKey booleans only", async () => {
+    deps.secrets.hasKey = p => p === "groq";
+    registerIpc(deps);
+    const r = await call("store:load");
+    expect(r.value.hasKey).toEqual({ gemini: false, groq: true });
+  });
+  it("saves a key for the given provider (write-only) and rejects unknown providers", async () => {
+    const calls = [];
+    deps.secrets.setKey = (k, p) => calls.push([k, p]);
+    registerIpc(deps);
+    const ok = await call("ai:setKey", "K1", "groq");
+    expect(ok).toEqual({ ok: true, value: true });
+    expect(calls).toEqual([["K1", "groq"]]);
+    expect((await call("ai:setKey", "K2", "evil")).ok).toBe(false);
+    expect(calls).toHaveLength(1);
+  });
+  it("tests the connection for the selected provider", async () => {
+    const seen = [];
+    deps.generator.testConnection = async (m, p) => { seen.push([m, p]); return true; };
+    registerIpc(deps);
+    await call("ai:test", "flash", "groq");
+    expect(seen).toEqual([["flash", "groq"]]);
+  });
   it("never returns the API key", async () => {
     deps.secrets.hasKey = () => true; deps.secrets.getKey = () => "SECRET";
     registerIpc(deps);

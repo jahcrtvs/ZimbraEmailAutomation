@@ -1,0 +1,147 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Daily Digest</title>
+<link rel="stylesheet" href="_ds/zimbra-digest-design-system-9514e4fa-9295-4d0a-9f3e-f282abefcf29/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/zimbra-digest-design-system-9514e4fa-9295-4d0a-9f3e-f282abefcf29/tokens/colors.css">
+<link rel="stylesheet" href="_ds/zimbra-digest-design-system-9514e4fa-9295-4d0a-9f3e-f282abefcf29/tokens/typography.css">
+<link rel="stylesheet" href="_ds/zimbra-digest-design-system-9514e4fa-9295-4d0a-9f3e-f282abefcf29/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/zimbra-digest-design-system-9514e4fa-9295-4d0a-9f3e-f282abefcf29/tokens/base.css">
+<link rel="stylesheet" href="_ds/zimbra-digest-design-system-9514e4fa-9295-4d0a-9f3e-f282abefcf29/styles.css">
+<script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/zimbra-digest-design-system-9514e4fa-9295-4d0a-9f3e-f282abefcf29/_ds_bundle.js"></script><script src="data.js"></script>
+<style>html,body{height:100%;overflow:hidden}body{background:radial-gradient(90% 70% at 50% 0%,#1d1d1d 0%,#070707 70%)}.hrow:hover{background:var(--ink-4)!important}a{color:var(--orange-400)}a:hover{color:var(--orange-500)}</style></head><body><div id="root"></div>
+<script type="text/babel" src="Shell.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+<script type="text/babel" src="screens2.jsx"></script>
+<script type="text/babel" src="TemplatesScreen.jsx"></script>
+<script type="text/babel">
+const DSX=window.ZimbraDigestDesignSystem_9514e4;
+const gen=(n,t,d)=>DD.render(t,DD.buildVars(n,DD.user,d));
+const O7=new Date(2026,9,7),O9=new Date(2026,9,9);
+const statuses=["sent","sent","sent"];
+const base=()=>({page:"new",stage:"form",notes:{...DD.emptyNotes},date:DD.today,blocks:[],draft:{},digestStatus:"none",schedule:{date:DD.today,time:"5:00 PM",to:DD.recipient},items:[{id:"u1",date:O9,time:"5:00 PM",to:DD.recipient,status:"scheduled",blocks:gen(DD.sampleNotes,DD.template,O9)}],modal:null,zimbra:true,toast:null,genAt:"4:36 PM",savedAt:null,sentAt:null,history:DD.history.map((h,i)=>({...h,status:statuses[i]})),historySel:null,template:DD.template,genStep:0,prepStep:0,testing:false,testingAI:false});
+const ready=()=>{const n={...DD.sampleNotes};return {notes:n,blocks:gen(n,DD.template,DD.today),digestStatus:"ready",stage:"review"};};
+const draftOf=b=>Object.fromEntries(b.map((x,i)=>x.type==="section"?[i,x.items.join("\n")]:null).filter(Boolean));
+const curItem=()=>({id:"cur",date:DD.today,time:"5:00 PM",to:DD.recipient,status:"scheduled",blocks:ready().blocks});
+const sched=()=>({...ready(),digestStatus:"scheduled",items:[curItem(),...base().items]});
+const STATES=[
+["New Digest · Empty",{}],
+["New Digest · Partially filled",{notes:{...DD.emptyNotes,work:"worked on hibernate\ncriteria query"},digestStatus:"draft"}],
+["New Digest · Filled",{notes:{...DD.sampleNotes},digestStatus:"draft"}],
+["Generating",{notes:{...DD.sampleNotes},stage:"generating",genStep:1,digestStatus:"draft"}],
+["Generation error",{notes:{...DD.sampleNotes},stage:"error",digestStatus:"draft"}],
+["Review · Generated",ready()],
+["Review · Editing",(()=>{const r=ready();const d=draftOf(r.blocks);d[0]+="\nUpdated the Office repository mappings.";return {...r,stage:"editing",draft:d};})()],
+["Review · Saved",{...ready(),savedAt:"4:38 PM",toast:{message:"Saved",tone:"success",id:1}}],
+["Send Now confirmation",{...ready(),modal:{t:"send"}}],
+["Preparing in Zimbra",{...ready(),modal:{t:"prepare"},prepStep:1}],
+["Ready in Zimbra",{...ready(),digestStatus:"prepared",modal:{t:"prepare"},prepStep:3}],
+["Zimbra login required",{...ready(),zimbra:false,modal:{t:"login"}}],
+["Zimbra connection error",{...ready(),modal:{t:"zerr"}}],
+["Zimbra status · Connected",{...ready(),modal:{t:"zstatus"}}],
+["Zimbra status · Disconnected",{...ready(),zimbra:false,modal:{t:"zstatus"}}],
+["Prepared · waiting for you to send",{...ready(),digestStatus:"prepared"}],
+["Schedule dialog",{...ready(),modal:{t:"schedule"}}],
+["Schedule failed",{...ready(),modal:{t:"schedule",fail:true}}],
+["Scheduled confirmation",{...sched(),toast:{message:"Digest scheduled for 5:00 PM.",tone:"success",id:2}}],
+["Scheduled list",{...sched(),page:"scheduled"}],
+["Edit schedule",{...sched(),page:"scheduled",modal:{t:"schedule",edit:true,id:"cur"}}],
+["Cancel confirmation",{...sched(),page:"scheduled",modal:{t:"cancelSched",id:"cur"}}],
+["Cancelled",(()=>{const s=sched();return {...ready(),page:"scheduled",items:s.items.map(i=>i.id==="cur"?{...i,status:"cancelled"}:i),toast:{message:"Digest cancelled.",tone:"info",id:3}};})()],
+["Missed schedule",{page:"scheduled",items:[{id:"u0",date:O7,time:"5:00 PM",to:DD.recipient,status:"scheduled",blocks:DD.history[0].blocks},...base().items],modal:{t:"missed",id:"u0"}}],
+["Scheduled · Empty",{page:"scheduled",items:[]}],
+["History",{page:"history"}],
+["History detail",{page:"history",historySel:"h0"}],
+["History · Empty",{page:"history",history:[]}],
+["Templates",{page:"templates"}],
+["Settings",{page:"settings"}]
+];
+function App(){
+  const [s,setS]=React.useState(base);const ref=React.useRef(s);ref.current=s;
+  const up=p=>setS(prev=>({...prev,...(typeof p==="function"?p(prev):p)}));
+  const timers=React.useRef([]);const later=(fn,ms)=>timers.current.push(setTimeout(fn,ms));const clear=()=>{timers.current.forEach(clearTimeout);timers.current=[];};
+  const toast=(message,tone="success")=>{const id=Date.now();up({toast:{message,tone,id}});later(()=>up(p=>p.toast&&p.toast.id===id?{toast:null}:{}),3200);};
+  const [idx,setIdx]=React.useState("0");const [size,setSize]=React.useState("1440");
+  const prepare=forCur=>{clear();up({modal:{t:"prepare"},prepStep:0});later(()=>up({prepStep:1}),700);later(()=>up({prepStep:2}),1400);later(()=>{up(p=>({prepStep:3,digestStatus:forCur?"prepared":p.digestStatus}));toast("Email prepared in Zimbra.");},2100);};
+  const a={
+    go:page=>up({page,historySel:null}),
+    newDigest:()=>{const c=ref.current;if(["none","sent"].includes(c.digestStatus))a.resetDigest();else up({page:"new"});},
+    resetDigest:()=>{clear();up(p=>({page:"new",stage:"form",notes:{...DD.emptyNotes},blocks:[],draft:{},digestStatus:"none",savedAt:null,sentAt:null,items:p.items.filter(i=>i.id!=="cur"),modal:null}));},
+    setNotes:notes=>up(p=>({notes,digestStatus:p.digestStatus==="none"?"draft":p.digestStatus})),
+    fillSample:()=>up({notes:{...DD.sampleNotes},digestStatus:"draft"}),
+    generate:()=>{const c=ref.current;if(!Object.values(c.notes).some(v=>v.trim()))return;clear();up({page:"new",stage:"generating",genStep:0,modal:null});
+      later(()=>up({genStep:1}),600);later(()=>up({genStep:2}),1200);
+      later(()=>up(p=>({stage:"review",blocks:gen(p.notes,p.template,p.date),digestStatus:"ready",savedAt:null,genAt:"4:36 PM"})),1800);},
+    regenerate:()=>up(p=>p.savedAt?{modal:{t:"regen"}}:(a.generate(),{})),
+    editNotes:()=>up({stage:"form",digestStatus:"draft"}),
+    startEdit:()=>up(p=>({stage:"editing",draft:draftOf(p.blocks)})),
+    setDraft:draft=>up({draft}),
+    saveEdit:()=>{up(p=>({stage:"review",savedAt:"4:38 PM",blocks:p.blocks.map((b,i)=>b.type==="section"&&p.draft[i]!=null?{...b,items:p.draft[i].split("\n").map(x=>x.trim()).filter(Boolean)}:b)}));toast("Saved");},
+    cancelEdit:()=>up({stage:"review"}),
+    openSchedule:(edit,id)=>up({modal:{t:"schedule",edit,id}}),
+    confirmSchedule:(sch,editId,retry)=>{const c=ref.current;
+      if(c.modal.willFail&&!retry){up({modal:{...c.modal,fail:true,willFail:false}});return;}
+      if(editId&&editId!=="cur"){up(p=>({items:p.items.map(i=>i.id===editId?{...i,...sch}:i),modal:null}));toast("Schedule updated.");return;}
+      up(p=>({schedule:sch,digestStatus:"scheduled",stage:"review",modal:null,items:[{id:"cur",...sch,status:"scheduled",blocks:p.blocks},...p.items.filter(i=>i.id!=="cur")]}));
+      toast(editId?"Schedule updated.":"Digest scheduled for "+sch.time+".");},
+    cancelSchedule:id=>{up(p=>({items:p.items.map(i=>i.id===id?{...i,status:"cancelled"}:i),digestStatus:id==="cur"?"ready":p.digestStatus,modal:null}));toast("Digest cancelled.","info");},
+    openSend:()=>up({modal:{t:"send"}}),
+    confirmSend:()=>{if(!ref.current.zimbra){up({modal:{t:"login"}});return;}prepare(true);},
+    loginZimbra:()=>{up({modal:null});toast("Opening Zimbra in your browser…","info");later(()=>{up({zimbra:true});toast("Zimbra connected.");},1200);},
+    retryZimbra:()=>{up({modal:null,testing:true});later(()=>{up({testing:false,modal:{t:"send"}});},800);},
+    testZimbra:()=>{up({testing:true});later(()=>{up(p=>({testing:false}));toast(ref.current.zimbra?"Zimbra connection OK.":"Zimbra login required.",ref.current.zimbra?"success":"warning");},900);},
+    openZimbra:()=>{toast("Opening Zimbra in your browser…","info");},
+    setModal:modal=>up({modal}),closeModal:()=>{clear();up({modal:null});},
+    markSent:()=>up(p=>({digestStatus:"sent",sentAt:"4:41 PM",history:[{id:"h-today",date:p.date,dateLabel:DD.fmt(p.date),time:"4:41 PM",blocks:p.blocks,notes:p.notes,status:"sent"},...p.history.filter(h=>h.id!=="h-today")]})),
+    prepareMissed:id=>{up(p=>({items:p.items.filter(i=>i.id!==id)}));prepare(false);},
+    dismissMissed:id=>{up(p=>({items:p.items.map(i=>i.id===id?{...i,status:"cancelled"}:i),modal:null}));toast("Digest cancelled. No email was sent.","info");},
+    selectHistory:id=>up({historySel:id}),
+    duplicate:h=>{up({notes:{...h.notes},page:"new",stage:"form",digestStatus:"draft",blocks:[],savedAt:null,items:ref.current.items.filter(i=>i.id!=="cur")});toast("Notes copied. Generate and review the new digest.","info");},
+    saveTemplate:tpl=>{up({template:tpl});toast("Template saved.");},
+    saveSettings:()=>toast("Settings saved."),
+    testAI:()=>{up({testingAI:true});later(()=>{up({testingAI:false});toast("Connection OK.");},900);}
+  };
+  React.useEffect(()=>{const h=e=>{if(!(e.metaKey||e.ctrlKey))return;const c=ref.current,k=e.key.toLowerCase();
+    if(k==="n"){e.preventDefault();a.newDigest();}
+    else if(k==="enter"&&c.page==="new"&&["form","error"].includes(c.stage)){e.preventDefault();a.generate();}
+    else if(k==="s"&&e.shiftKey){e.preventDefault();if(c.stage==="review"&&c.digestStatus==="ready")a.openSchedule(false);}
+    else if(k==="s"){e.preventDefault();if(c.stage==="editing"&&c.page==="new")a.saveEdit();else if(c.page==="templates"&&window.__ddSaveTemplate)window.__ddSaveTemplate();else if(c.page==="settings")a.saveSettings();}};
+    window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[]);
+  const apply=i=>{clear();setIdx(i);const st=STATES[+i][1];const b=base();setS({...b,...st,modal:st.modal&&st.modal.t==="schedule"&&i==="17"?{...st.modal,willFail:false}:st.modal||null});};
+  const W=size==="1440"?1440:1280,H=size==="1440"?900:800;
+  const [vp,setVp]=React.useState({w:innerWidth,h:innerHeight});
+  React.useEffect(()=>{const r=()=>setVp({w:innerWidth,h:innerHeight});addEventListener("resize",r);return()=>removeEventListener("resize",r);},[]);
+  const scale=Math.min(1,(vp.w-32)/W,(vp.h-76)/H);
+  const nSch=s.items.filter(i=>i.status==="scheduled").length;
+  const items=[{id:"new",label:"New Digest",icon:"square-pen",kbd:"⌘N"},{id:"scheduled",label:"Scheduled",icon:"clock",count:nSch||undefined,countTone:"info"},{id:"history",label:"History",icon:"history"},{id:"templates",label:"Templates",icon:"layout-template"},{id:"settings",label:"Settings",icon:"settings"}];
+  const {AppSidebar,Toast,Select,Button}=DSX;
+  const Screen={new:NewDigestScreen,scheduled:ScheduledScreen,history:HistoryScreen,templates:TemplatesScreen,settings:SettingsScreen}[s.page];
+  const mt=s.modal&&s.modal.t;
+  return <div style={{height:"100%",display:"flex",flexDirection:"column",alignItems:"center"}}>
+    <div style={{display:"flex",alignItems:"center",gap:10,height:60,flexShrink:0}}>
+      <span style={{font:"var(--text-meta)",color:"var(--fg-3)"}}>State</span>
+      <div style={{width:300}}><Select value={idx} onChange={apply} options={STATES.map((x,i)=>({value:String(i),label:(i+1)+". "+x[0]}))}/></div>
+      <div style={{display:"flex",gap:4,marginLeft:8}}>{["1440","1280"].map(z=><Button key={z} size="sm" variant={size===z?"inverse":"ghost"} onClick={()=>setSize(z)}>{z==="1440"?"1440 × 900":"1280 × 800"}</Button>)}</div>
+    </div>
+    <div style={{width:W*scale,height:H*scale}}><div style={{transform:"scale("+scale+")",transformOrigin:"top left"}}>
+      <WindowFrame width={W} height={H} status={<AppStatus s={s}/>}>
+        <AppSidebar items={items} value={s.page} onChange={id=>id==="new"?(a.go("new"),a.newDigest()):a.go(id)} connected={s.zimbra} onConnectionClick={()=>a.setModal({t:"zstatus"})}/>
+        <main style={{flex:1,minWidth:0,display:"flex",minHeight:0}}><Screen s={s} a={a}/></main>
+        {mt==="schedule"&&<ScheduleModal key={s.modal.id||"n"} s={s} a={a}/>}
+        {mt==="send"&&<SendModal s={s} a={a}/>}
+        {mt==="prepare"&&<PrepareModal s={s} a={a}/>}
+        {mt==="login"&&<LoginModal s={s} a={a}/>}
+        {mt==="zerr"&&<ZimbraErrorDialog a={a}/>}
+        {mt==="zstatus"&&<ZimbraStatusModal s={s} a={a}/>}
+        {mt==="cancelSched"&&<ConfirmCancel s={s} a={a}/>}
+        {mt==="regen"&&<ConfirmRegen a={a}/>}
+        {mt==="missed"&&<MissedDialog s={s} a={a}/>}
+        {mt==="view"&&<ViewModal s={s} a={a}/>}
+        {s.toast&&<div key={s.toast.id} style={{position:"absolute",left:0,right:0,bottom:24,display:"flex",justifyContent:"center",zIndex:200,pointerEvents:"none"}}><div style={{pointerEvents:"auto"}}><Toast tone={s.toast.tone} message={s.toast.message} onClose={()=>up({toast:null})}/></div></div>}
+      </WindowFrame>
+    </div></div>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script></body></html>

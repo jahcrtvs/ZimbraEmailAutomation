@@ -1,0 +1,8 @@
+:root{color-scheme:dark}
+*{scrollbar-width:thin;scrollbar-color:var(--ink-6) transparent}
+body{margin:0;background:var(--bg-app);color:var(--fg-1);font:var(--text-body);-webkit-font-smoothing:antialiased}
+a{color:var(--fg-accent);text-decoration:none}
+a:hover{color:var(--orange-300);text-decoration:underline}
+@keyframes dd-spin{to{transform:rotate(360deg)}}
+@keyframes dd-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes dd-pop{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}

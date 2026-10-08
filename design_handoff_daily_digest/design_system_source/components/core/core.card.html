@@ -1,0 +1,18 @@
+<!-- @dsCard group="Components" viewport="700x190" name="Core — Button, IconButton, Kbd, Tooltip" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{padding:20px;box-sizing:border-box}.r{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}</style></head><body><div id="root" style="position:relative"></div>
+<script type="text/babel">
+const DS=window.ZimbraDigestDesignSystem_9514e4;
+const {Button,IconButton,Kbd,Tooltip,Icon}=DS;
+function Demo(){return <div>
+<div className="r"><Button variant="primary" icon="sparkles" kbd="⌘↵">Generate Digest</Button><Button variant="inverse">Open Zimbra</Button><Button icon="pencil">Edit</Button><Button variant="outline" icon="refresh-cw">Regenerate</Button><Button variant="ghost">Cancel</Button></div>
+<div className="r"><Button variant="primary" loading>Generating…</Button><Button variant="primary" disabled>Disabled</Button><Button variant="danger" size="sm">Cancel Schedule</Button><Button size="sm" variant="outline">Small</Button><Button size="lg" variant="primary" icon="clock">Schedule Send</Button></div>
+<div className="r"><IconButton icon="x"/><IconButton icon="ellipsis"/><IconButton icon="arrow-up-right" variant="outline"/><IconButton icon="bell" variant="filled" dot/><Tooltip label="Schedule" kbd="⌘⇧S" side="right"><IconButton icon="clock" variant="outline"/></Tooltip><Kbd>⌘N</Kbd><Kbd>⌘S</Kbd><Kbd>Esc</Kbd></div>
+</div>}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script></body></html>

@@ -21,7 +21,7 @@ describe("generate", () => {
       fetchImpl: async (url, init) => { seen = { url, init }; return geminiReply({ tasks: ["Did A."], topics: ["Studied B."], weekly_plans: ["Do C."], blockers: [] }); }
     });
     const blocks = await g.generate(payload);
-    expect(seen.url).toContain("gemini-flash-latest:generateContent");
+    expect(seen.url).toContain("gemini-2.5-flash:generateContent");
     expect(seen.init.headers["x-goog-api-key"]).toBe("KEY");
     expect(JSON.parse(seen.init.body).contents[0].parts[0].text).toContain("worked on hibernate");
     expect(blocks.find(b => b.title === "TASK TODAY").items).toEqual(["Did A."]);

@@ -1,7 +1,7 @@
 import { buildVars, render } from "../shared/report.js";
 import { fromISODate } from "../shared/time.js";
 
-export const MODEL_IDS = { flash: "gemini-flash-latest", pro: "gemini-pro-latest" };
+export const MODEL_IDS = { flash: "gemini-2.5-flash", pro: "gemini-pro-latest" };
 const ENDPOINT = id => `https://generativelanguage.googleapis.com/v1beta/models/${id}:generateContent`;
 
 const PROMPT = `You turn rough daily work notes into short report bullets for a manager.

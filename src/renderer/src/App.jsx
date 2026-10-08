@@ -1,1 +1,42 @@
-export const App = () => <div>Daily Digest</div>;
+import React from "react";
+import { AppSidebar, Toast } from "./ds";
+import { AppShell, AppStatus } from "./AppShell.jsx";
+import { useApp } from "./useApp.js";
+import { NewDigestScreen } from "./screens/NewDigest.jsx";
+import { ScheduledScreen } from "./screens/Scheduled.jsx";
+import { HistoryScreen } from "./screens/History.jsx";
+import { TemplatesScreen } from "./screens/Templates.jsx";
+import { SettingsScreen } from "./screens/Settings.jsx";
+import { ScheduleModal, SendModal, PrepareModal, LoginModal, ZimbraErrorDialog, ZimbraStatusModal, ConfirmCancel, ConfirmRegen, MissedDialog, ViewModal } from "./screens/dialogs.jsx";
+
+export function App() {
+  const { s, a, ready } = useApp();
+  if (!ready) return null;
+  const nSch = s.items.filter(i => i.status === "scheduled").length;
+  const items = [
+    { id: "new", label: "New Digest", icon: "square-pen", kbd: "⌘N" },
+    { id: "scheduled", label: "Scheduled", icon: "clock", count: nSch || undefined, countTone: "info" },
+    { id: "history", label: "History", icon: "history" },
+    { id: "templates", label: "Templates", icon: "layout-template" },
+    { id: "settings", label: "Settings", icon: "settings" }
+  ];
+  const Screen = { new: NewDigestScreen, scheduled: ScheduledScreen, history: HistoryScreen, templates: TemplatesScreen, settings: SettingsScreen }[s.page];
+  const mt = s.modal && s.modal.t;
+  return (
+    <AppShell status={<AppStatus s={s} />}>
+      <AppSidebar items={items} value={s.page} onChange={id => id === "new" ? (a.go("new"), a.newDigest()) : a.go(id)} connected={s.zimbra} onConnectionClick={() => a.setModal({ t: "zstatus" })} />
+      <main style={{ flex: 1, minWidth: 0, display: "flex", minHeight: 0 }}><Screen s={s} a={a} /></main>
+      {mt === "schedule" && <ScheduleModal key={s.modal.id || "n"} s={s} a={a} />}
+      {mt === "send" && <SendModal s={s} a={a} />}
+      {mt === "prepare" && <PrepareModal s={s} a={a} />}
+      {mt === "login" && <LoginModal s={s} a={a} />}
+      {mt === "zerr" && <ZimbraErrorDialog s={s} a={a} />}
+      {mt === "zstatus" && <ZimbraStatusModal s={s} a={a} />}
+      {mt === "cancelSched" && <ConfirmCancel s={s} a={a} />}
+      {mt === "regen" && <ConfirmRegen a={a} />}
+      {mt === "missed" && <MissedDialog s={s} a={a} />}
+      {mt === "view" && <ViewModal s={s} a={a} />}
+      {s.toast && <div key={s.toast.id} style={{ position: "absolute", left: 0, right: 0, bottom: 24, display: "flex", justifyContent: "center", zIndex: 200, pointerEvents: "none" }}><div style={{ pointerEvents: "auto" }}><Toast tone={s.toast.tone} message={s.toast.message} onClose={a.clearToast} /></div></div>}
+    </AppShell>
+  );
+}

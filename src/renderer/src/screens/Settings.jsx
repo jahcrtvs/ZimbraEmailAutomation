@@ -41,6 +41,7 @@ export function SettingsScreen({s,a}){
       <Card title="AI Provider" subtitle="Used to organize notes into the report"><div style={row}><Select label="Provider" value={p.provider} onChange={v=>setP({...p,provider:v,apiKey:""})} options={[{value:"gemini",label:"Gemini"},{value:"groq",label:"Groq"}]}/>{p.provider==="gemini"&&<Select label="Model" value={p.model} onChange={set("model")} options={[{value:"flash",label:"Flash"},{value:"pro",label:"Pro"}]}/>}</div>
         <div style={{marginTop:14}}><Input label="API key" type="password" value={p.apiKey} onChange={v=>setP({...p,apiKey:v})} placeholder={s.hasKey[p.provider]?"Saved":"Paste your key"} helper="Stored encrypted on this computer."/></div>
         <div style={{marginTop:14}}><Button variant="outline" loading={s.testingAI} onClick={a.testAI}>Test Connection</Button></div></Card>
+      <div style={{font:"var(--text-helper)",color:"var(--fg-3)",textAlign:"center"}}>Daily Digest v{__APP_VERSION__}</div>
     </div></div>
   </div>;
 }

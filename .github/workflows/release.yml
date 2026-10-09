@@ -14,6 +14,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history and tags, needed for the release notes
 
       - uses: actions/setup-node@v4
         with:
@@ -29,9 +31,25 @@ jobs:
           npm run build
           npx electron-builder --win --publish never
 
+      # Notes list every commit since the previous version tag (or all commits for the first one),
+      # leaving out merges and the version-bump commits themselves.
+      - name: Write release notes
+        shell: bash
+        run: |
+          prev=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          range=${prev:+$prev..}$GITHUB_REF_NAME
+          {
+            echo "## Changes"
+            echo
+            git log "$range" --no-merges --pretty='- %s (%h)' | grep -v -- '- chore: release v' || true
+            echo
+            if [ -n "$prev" ]; then echo "**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${prev}...${GITHUB_REF_NAME}"; fi
+          } > release-notes.md
+          cat release-notes.md
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           name: Daily Digest ${{ github.ref_name }}
-          generate_release_notes: true
+          body_path: release-notes.md
           files: dist/*.exe

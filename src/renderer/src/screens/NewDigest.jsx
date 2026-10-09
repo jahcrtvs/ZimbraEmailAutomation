@@ -20,7 +20,7 @@ function InputPane({s,a}){
     <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 28px",borderTop:"1px solid var(--border-subtle)"}}>
       {empty&&<Button variant="ghost" size="sm" icon="copy" onClick={a.fillSample}>Use example notes</Button>}
       <div style={{flex:1}}/>
-      <Button variant="primary" size="lg" loading={busy} disabled={empty} kbd={busy?undefined:"âŒ˜â†µ"} onClick={a.generate}>{busy?"Generatingâ€¦":"Generate Digest"}</Button>
+      <Button variant="primary" size="lg" loading={busy} disabled={empty} kbd={busy?undefined:"⌘↵"} onClick={a.generate}>{busy?"Generating…":"Generate Digest"}</Button>
     </div>
   </div>;
 }
@@ -86,7 +86,7 @@ export function NewDigestScreen({s,a}){
         <div style={{display:"flex",alignItems:"center",gap:10,padding:"16px 28px 0"}}><Overline>{showDoc?"Report":"Preview"}</Overline><div style={{flex:1}}/>{showDoc&&<span style={{font:"var(--text-meta)",color:stage==="editing"?"var(--orange-400)":"var(--fg-3)"}}>{ver}</span>}</div>
         <div style={{flex:1,overflowY:"auto",padding:"14px 28px 24px"}}>
           {stage==="form"&&!showDoc&&<Placeholder/>}
-          {stage==="generating"&&<div style={{padding:"48px 8px"}}><Steps title="Generating reportâ€¦" steps={["Reading your notes","Applying the template","Preparing the report"]} step={s.genStep}/></div>}
+          {stage==="generating"&&<div style={{padding:"48px 8px"}}><Steps title="Generating report…" steps={["Reading your notes","Applying the template","Preparing the report"]} step={s.genStep}/></div>}
           {stage==="error"&&<div style={{paddingTop:12}}><Banner tone="danger" title="Unable to generate the digest." details={s.genError?.details} actions={<Button size="sm" variant="primary" onClick={a.generate}>Try Again</Button>}>Your original notes are still available.</Banner></div>}
           {showDoc&&<DigestDocument blocks={s.blocks} subject={subject} to={s.schedule.to} editing={stage==="editing"} draft={s.draft} setDraft={a.setDraft}/>}
         </div>
@@ -95,10 +95,10 @@ export function NewDigestScreen({s,a}){
             <Button variant="outline" icon="pencil" onClick={a.startEdit}>Edit</Button>
             <Button variant="ghost" icon="refresh-cw" onClick={a.regenerate}>Regenerate</Button><div style={{flex:1}}/>
             <Button variant="outline" icon="send" onClick={a.openSend}>Send Now</Button>
-            <Button variant="primary" size="lg" icon="clock" kbd="âŒ˜â‡§S" onClick={()=>a.openSchedule(false)}>Schedule Send</Button>
+            <Button variant="primary" size="lg" icon="clock" kbd="⌘⇧S" onClick={()=>a.openSchedule(false)}>Schedule Send</Button>
           </>:<>
             <span style={{font:"var(--text-meta)",color:"var(--fg-3)"}}>One bullet per line. Changes apply to this digest only.</span><div style={{flex:1}}/>
-            <Button variant="ghost" onClick={a.cancelEdit}>Cancel</Button><Button variant="primary" icon="check" kbd="âŒ˜S" onClick={a.saveEdit}>Save Changes</Button>
+            <Button variant="ghost" onClick={a.cancelEdit}>Cancel</Button><Button variant="primary" icon="check" kbd="⌘S" onClick={a.saveEdit}>Save Changes</Button>
           </>}
         </div>}
       </div>

@@ -35,7 +35,7 @@ export function createZimbra({ connect, ensure, selectors = SELECTORS }) {
         await page.locator(selectors.subject).first().fill(subject);
         const scope = selectors.bodyFrame ? page.frameLocator(selectors.bodyFrame) : page;
         await scope.locator(selectors.body).first().fill(body);
-      } catch (e) { throw new ZimbraError("COMPOSE", "Could not fill the Zimbra message: " + String(e.message || e)); }
+      } catch (e) { throw new ZimbraError("COMPOSE", "Could not fill the Zimbra message: " + String(e.message || e).replace(/\x1b\[[0-9;]*m/g, "")); }
       onStep(3);
     }
   };

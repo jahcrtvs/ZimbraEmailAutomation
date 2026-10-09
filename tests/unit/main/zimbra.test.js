@@ -1,15 +1,17 @@
-﻿import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import { createZimbra, ZimbraError } from "../../../src/main/zimbra.js";
 import { SELECTORS } from "../../../src/main/zimbra.selectors.js";
 
-function fakeBrowser({ loggedIn = true, hasPage = false, htmlBody = false } = {}) {
+function fakeBrowser({ loggedIn = true, hasPage = false, htmlBody = false, toShows = null } = {}) {
   const log = [];
+  const typed = () => log.filter(e => e[0] === "insert").map(e => e[1]).join(" ");
   const locator = sel => ({
     count: async () => (sel === SELECTORS.passwordField ? (loggedIn ? 0 : 1) : sel === SELECTORS.mailMarker ? (loggedIn ? 1 : 0) : sel === SELECTORS.body && htmlBody ? 0 : 1),
     click: async () => log.push(["click", sel]),
     fill: async v => log.push(["fill", sel, v]),
-    pressSequentially: async v => log.push(["type", sel, v]),
+    focus: async () => log.push(["focus", sel]),
+    evaluate: async () => (toShows ?? typed()),
     waitFor: async () => {},
     contentFrame: () => ({ locator: s => locator("frame:" + s) }),
     filter() { return this; },
@@ -20,6 +22,8 @@ function fakeBrowser({ loggedIn = true, hasPage = false, htmlBody = false } = {}
     goto: async u => log.push(["goto", u]),
     bringToFront: async () => log.push(["front"]),
     waitForSelector: async () => {},
+    waitForTimeout: async () => {},
+    keyboard: { insertText: async t => log.push(["insert", t]), press: async k => log.push(["press", k]) },
     locator, frameLocator: () => ({ locator })
   };
   const ctx = { pages: () => (hasPage ? [page] : []), newPage: async () => page };
@@ -42,14 +46,20 @@ describe("zimbra", () => {
     const steps = [];
     await z.prepareMessage({ url: "https://z", to: "a@b.co", subject: "Subj", body: "Body" }, n => steps.push(n));
     expect(steps).toEqual([1, 2, 3]);
-    expect(log).toEqual(expect.arrayContaining([["type", SELECTORS.to, "a@b.co;"], ["fill", SELECTORS.subject, "Subj"], ["fill", SELECTORS.body, "Body"]]));
+    expect(log).toEqual(expect.arrayContaining([["focus", SELECTORS.to], ["insert", "a@b.co"], ["press", ";"], ["fill", SELECTORS.subject, "Subj"], ["fill", SELECTORS.body, "Body"]]));
     expect(log.some(e => /send/i.test(JSON.stringify(e)))).toBe(false);
   });
-  it("types each of several recipients followed by ';'", async () => {
+  it("inserts each of several recipients, each committed with ';'", async () => {
     const { browser, log } = fakeBrowser();
     const z = createZimbra({ connect: async () => browser, ensure: async () => {} });
     await z.prepareMessage({ url: "https://z", to: "a@x.com, b@y.org", subject: "s", body: "b" }, () => {});
-    expect(log).toContainEqual(["type", SELECTORS.to, "a@x.com; b@y.org;"]);
+    expect(log.filter(e => e[0] === "insert" || e[0] === "press")).toEqual([["insert", "a@x.com"], ["press", ";"], ["insert", "b@y.org"], ["press", ";"]]);
+  });
+  it("throws COMPOSE naming the recipient Zimbra mangled", async () => {
+    const { browser } = fakeBrowser({ toShows: "llee@77sof.com" });
+    const z = createZimbra({ connect: async () => browser, ensure: async () => {} });
+    await expect(z.prepareMessage({ url: "https://z", to: "llee@77soft.com", subject: "s", body: "b" }, () => {}))
+      .rejects.toMatchObject({ code: "COMPOSE", message: expect.stringContaining("llee@77soft.com") });
   });
   it("fills the TinyMCE iframe body when there is no visible plain-text body", async () => {
     const { browser, log } = fakeBrowser({ htmlBody: true });

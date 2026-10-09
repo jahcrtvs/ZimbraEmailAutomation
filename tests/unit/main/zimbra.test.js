@@ -9,6 +9,7 @@ function fakeBrowser({ loggedIn = true, hasPage = false, htmlBody = false } = {}
     count: async () => (sel === SELECTORS.passwordField ? (loggedIn ? 0 : 1) : sel === SELECTORS.mailMarker ? (loggedIn ? 1 : 0) : sel === SELECTORS.body && htmlBody ? 0 : 1),
     click: async () => log.push(["click", sel]),
     fill: async v => log.push(["fill", sel, v]),
+    pressSequentially: async v => log.push(["type", sel, v]),
     waitFor: async () => {},
     contentFrame: () => ({ locator: s => locator("frame:" + s) }),
     filter() { return this; },
@@ -41,7 +42,7 @@ describe("zimbra", () => {
     const steps = [];
     await z.prepareMessage({ url: "https://z", to: "a@b.co", subject: "Subj", body: "Body" }, n => steps.push(n));
     expect(steps).toEqual([1, 2, 3]);
-    expect(log).toEqual(expect.arrayContaining([["fill", SELECTORS.to, "a@b.co"], ["fill", SELECTORS.subject, "Subj"], ["fill", SELECTORS.body, "Body"]]));
+    expect(log).toEqual(expect.arrayContaining([["type", SELECTORS.to, "a@b.co;"], ["fill", SELECTORS.subject, "Subj"], ["fill", SELECTORS.body, "Body"]]));
     expect(log.some(e => /send/i.test(JSON.stringify(e)))).toBe(false);
   });
   it("fills the TinyMCE iframe body when there is no visible plain-text body", async () => {

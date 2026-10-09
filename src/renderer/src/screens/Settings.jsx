@@ -27,7 +27,7 @@ export function SettingsScreen({s,a}){
   React.useEffect(()=>{window.__ddSaveSettings=save;return()=>{delete window.__ddSaveSettings;};});
   const set=k=>v=>setP({...p,[k]:v});const row={display:"grid",gridTemplateColumns:"1fr 1fr",gap:14};
   return <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
-    <PageHeader title="Settings" right={<Button variant="primary" kbd="⌘S" onClick={save}>Save</Button>}/>
+    <PageHeader title="Settings" right={<Button variant="primary" kbd="Ctrl+S" onClick={save}>Save</Button>}/>
     <div style={{flex:1,overflowY:"auto"}}><div style={{maxWidth:720,padding:28,display:"flex",flexDirection:"column",gap:14}}>
       <Card title="General"><div style={row}><TimePicker label="Default send time" value={p.time} onChange={set("time")}/></div></Card>
       <Card title="Profile" subtitle="Used in the report sign-off"><div style={row}><Input label="Name" value={p.name} onChange={set("name")}/><Input label="Role" value={p.role} onChange={set("role")}/></div></Card>

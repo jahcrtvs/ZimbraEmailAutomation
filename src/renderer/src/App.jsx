@@ -14,7 +14,7 @@ export function App() {
   if (!ready) return null;
   const nSch = s.items.filter(i => i.status === "scheduled").length;
   const items = [
-    { id: "new", label: "New Digest", icon: "square-pen", kbd: "⌘N" },
+    { id: "new", label: "New Digest", icon: "square-pen", kbd: "Ctrl+N" },
     { id: "scheduled", label: "Scheduled", icon: "clock", count: nSch || undefined, countTone: "info" },
     { id: "history", label: "History", icon: "history" },
     { id: "templates", label: "Templates", icon: "layout-template" },

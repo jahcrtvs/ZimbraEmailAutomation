@@ -34,7 +34,7 @@ else {
         });
     const scheduler = createScheduler({
       store,
-      prepare: it => zimbra.prepareMessage({ url: store.read("settings").zimbra.url, to: it.recipient, subject: it.subject || subjectFor(store.read("settings").email.defaultSubject, fromISODate(it.date)), body: blocksToText(it.blocks) }),
+      prepare: it => zimbra.prepareMessage({ url: store.read("settings").zimbra.url, to: it.recipient, subject: it.subject || subjectFor(store.read("settings").email.defaultSubject, fromISODate(it.date), store.read("settings").email.dateFormat), body: blocksToText(it.blocks) }),
       notify: (title, body) => { if (Notification.isSupported()) new Notification({ title, body }).show(); },
       onChange: items => send("schedule:changed", items)
     });

@@ -39,7 +39,7 @@ test("schedule persists across restart and rejects past times", async () => {
   await w.getByRole("button", { name: /Generate Digest/ }).click();
   await expect(w.getByText("Worked on Hibernate.")).toBeVisible({ timeout: 10000 });
   await w.getByRole("button", { name: /Schedule Send/ }).click();
-  await expect(w.getByText(/Choose a time in the future|The current approved version/)).toBeVisible();
+  await expect(w.getByText(/Choose a time in the future|The current approved version/).first()).toBeVisible();
   // Pick tomorrow's date is covered manually; here assert the scheduled file after a valid schedule via API:
   await w.evaluate(async () => {
     const d = new Date(); d.setDate(d.getDate() + 1);

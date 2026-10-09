@@ -21,7 +21,7 @@ function InputPane({s,a}){
     <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 28px",borderTop:"1px solid var(--border-subtle)"}}>
       {empty&&<Button variant="ghost" size="sm" icon="copy" onClick={a.fillSample}>Use example notes</Button>}
       <div style={{flex:1}}/>
-      <Button variant="primary" size="lg" loading={busy} disabled={empty} kbd={busy?undefined:"⌘↵"} onClick={a.generate}>{busy?"Generating…":"Generate Digest"}</Button>
+      <Button variant="primary" size="lg" loading={busy} disabled={empty} kbd={busy?undefined:"Ctrl+↵"} onClick={a.generate}>{busy?"Generating…":"Generate Digest"}</Button>
     </div>
   </div>;
 }
@@ -96,10 +96,10 @@ export function NewDigestScreen({s,a}){
             <Button variant="outline" icon="pencil" onClick={a.startEdit}>Edit</Button>
             <Button variant="ghost" icon="refresh-cw" onClick={a.regenerate}>Regenerate</Button><div style={{flex:1}}/>
             <Button variant="outline" icon="send" onClick={a.openSend}>Send Now</Button>
-            <Button variant="primary" size="lg" icon="clock" kbd="⌘⇧S" onClick={()=>a.openSchedule(false)}>Schedule Send</Button>
+            <Button variant="primary" size="lg" icon="clock" kbd="Ctrl+Shift+S" onClick={()=>a.openSchedule(false)}>Schedule Send</Button>
           </>:<>
             <span style={{font:"var(--text-meta)",color:"var(--fg-3)"}}>One bullet per line. Changes apply to this digest only.</span><div style={{flex:1}}/>
-            <Button variant="ghost" onClick={a.cancelEdit}>Cancel</Button><Button variant="primary" icon="check" kbd="⌘S" onClick={a.saveEdit}>Save Changes</Button>
+            <Button variant="ghost" onClick={a.cancelEdit}>Cancel</Button><Button variant="primary" icon="check" kbd="Ctrl+S" onClick={a.saveEdit}>Save Changes</Button>
           </>}
         </div>}
       </div>

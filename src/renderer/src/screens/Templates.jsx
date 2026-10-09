@@ -37,7 +37,7 @@ export function TemplatesScreen({s,a}){
   const dirty=text!==s.template;
   React.useEffect(()=>{window.__ddSaveTemplate=()=>{if(dirty)a.saveTemplate(text);};return()=>{delete window.__ddSaveTemplate;};});
   return <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
-    <PageHeader title="Templates" meta="Daily Digest" right={<div style={{display:"flex",gap:8,alignItems:"center"}}>{dirty&&<span style={{font:"var(--text-meta)",color:"var(--fg-3)"}}>Unsaved changes</span>}<Button variant="ghost" disabled={!dirty} onClick={()=>setText(s.template)}>Cancel</Button><Button variant="primary" icon="check" kbd="⌘S" disabled={!dirty} onClick={()=>a.saveTemplate(text)}>Save Template</Button></div>}/>
+    <PageHeader title="Templates" meta="Daily Digest" right={<div style={{display:"flex",gap:8,alignItems:"center"}}>{dirty&&<span style={{font:"var(--text-meta)",color:"var(--fg-3)"}}>Unsaved changes</span>}<Button variant="ghost" disabled={!dirty} onClick={()=>setText(s.template)}>Cancel</Button><Button variant="primary" icon="check" kbd="Ctrl+S" disabled={!dirty} onClick={()=>a.saveTemplate(text)}>Save Template</Button></div>}/>
     <div style={{flex:1,minHeight:0,display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)"}}>
       <div style={{display:"flex",flexDirection:"column",gap:14,padding:"18px 28px 24px",borderRight:"1px solid var(--border-subtle)",minHeight:0}}>
         <Overline>Daily Digest format</Overline>

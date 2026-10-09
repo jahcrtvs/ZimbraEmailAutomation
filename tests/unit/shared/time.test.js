@@ -1,5 +1,22 @@
 import { describe, it, expect } from "vitest";
-import { fmt, fmtShort, parseTime, toISODate, fromISODate, dueAt, formatTime, dayLabel, isValidEmail, parseEmails, isValidRecipients } from "@shared/time.js";
+import { fmt, fmtShort, parseTime, toISODate, fromISODate, dueAt, formatTime, dayLabel, isValidEmail, parseEmails, isValidRecipients, formatDate } from "@shared/time.js";
+import { subjectFor } from "@shared/report.js";
+
+describe("date formats", () => {
+  const d = new Date(2026, 9, 9);
+  it("formats each style, defaulting to long", () => {
+    expect(formatDate(d)).toBe("October 9, 2026");
+    expect(formatDate(d, "weekday")).toBe("Friday, October 9, 2026");
+    expect(formatDate(d, "short")).toBe("Oct 9, 2026");
+    expect(formatDate(d, "mdy")).toBe("10/09/2026");
+    expect(formatDate(d, "dmy")).toBe("09/10/2026");
+    expect(formatDate(d, "iso")).toBe("2026-10-09");
+    expect(formatDate(d, "bogus")).toBe("October 9, 2026");
+  });
+  it("applies the format to the subject", () => {
+    expect(subjectFor("Daily Digest - {date}", d, "iso")).toBe("Daily Digest - 2026-10-09");
+  });
+});
 
 describe("time helpers", () => {
   it("formats dates", () => {

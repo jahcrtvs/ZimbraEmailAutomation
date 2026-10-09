@@ -105,10 +105,10 @@ export function createGenerator({ getKey, fetchImpl = fetch, sleep = realSleep }
   }
 
   return {
-    async generate({ notes, template, profile, date, model, provider }) {
+    async generate({ notes, template, profile, date, dateFormat, model, provider }) {
       const prov = providerOf(provider);
       const d = fromISODate(date);
-      const local = buildVars(notes, profile, d);
+      const local = buildVars(notes, profile, d, dateFormat);
       if (!getKey(prov)) return render(template, local);
       const ai = parseReply(await call(prov, model, PROMPT + notesText(notes)), PROVIDERS[prov].name);
       return render(template, { ...local, ...ai, tomorrow: ai.weekly_plans });

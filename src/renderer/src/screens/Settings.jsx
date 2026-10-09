@@ -1,7 +1,7 @@
 import React from "react";
 import * as DS from "../ds";
 import { PageHeader } from "../Shell.jsx";
-import { isValidRecipients } from "@shared/time.js";
+import { isValidRecipients, DATE_FORMATS, formatDate } from "@shared/time.js";
 import { subjectFor } from "@shared/report.js";
 const D = () => DS;
 const validUrl = u => { try { return /^https?:$/.test(new URL(u).protocol); } catch { return false; } };
@@ -9,7 +9,7 @@ export function SettingsScreen({s,a}){
   const {Card,Button,Input,Select,TimePicker,StatusBadge,Banner}=D();
   const [p,setP]=React.useState({
     name:s.settings.profile.name,role:s.settings.profile.role,
-    to:s.settings.email.defaultRecipient,subject:s.settings.email.defaultSubject,
+    to:s.settings.email.defaultRecipient,subject:s.settings.email.defaultSubject,dateFormat:s.settings.email.dateFormat,
     time:s.settings.general.defaultSendTime,provider:s.settings.ai.provider,model:s.settings.ai.model,url:s.settings.zimbra.url,apiKey:""});
   const [tried,setTried]=React.useState(false);
   const badTo=!isValidRecipients(p.to),badUrl=!validUrl(p.url);
@@ -19,7 +19,7 @@ export function SettingsScreen({s,a}){
     a.saveSettings({apiKey:p.apiKey,settings:{...s.settings,
       general:{...s.settings.general,defaultSendTime:p.time},
       profile:{name:p.name,role:p.role},
-      email:{defaultRecipient:p.to,defaultSubject:p.subject},
+      email:{defaultRecipient:p.to,defaultSubject:p.subject,dateFormat:p.dateFormat},
       zimbra:{url:p.url},
       ai:{...s.settings.ai,provider:p.provider,model:p.model}}});
     setP(x=>({...x,apiKey:""}));
@@ -31,7 +31,7 @@ export function SettingsScreen({s,a}){
     <div style={{flex:1,overflowY:"auto"}}><div style={{maxWidth:720,padding:28,display:"flex",flexDirection:"column",gap:14}}>
       <Card title="General"><div style={row}><TimePicker label="Default send time" value={p.time} onChange={set("time")}/></div></Card>
       <Card title="Profile" subtitle="Used in the report sign-off"><div style={row}><Input label="Name" value={p.name} onChange={set("name")}/><Input label="Role" value={p.role} onChange={set("role")}/></div></Card>
-      <Card title="Email"><div style={row}><Input label="Default recipients" value={p.to} onChange={set("to")} helper="Separate multiple addresses with commas." error={tried&&badTo?"Enter valid email addresses, separated by commas.":undefined}/><Input label="Default subject" value={p.subject} onChange={set("subject")} helper={subjectFor(p.subject,s.today)}/></div></Card>
+      <Card title="Email"><div style={row}><Input label="Default recipients" value={p.to} onChange={set("to")} helper="Separate multiple addresses with commas." error={tried&&badTo?"Enter valid email addresses, separated by commas.":undefined}/><Input label="Default subject" value={p.subject} onChange={set("subject")} helper={subjectFor(p.subject,s.today,p.dateFormat)}/><Select label="Date format" value={p.dateFormat} onChange={set("dateFormat")} options={Object.keys(DATE_FORMATS).map(k=>({value:k,label:formatDate(s.today,k)}))}/></div></Card>
       <Card title="Zimbra" actions={s.zimbra?<StatusBadge status="sent" label="Connected" size="sm"/>:<StatusBadge status="none" label="Disconnected" size="sm"/>}>
         <div style={{display:"flex",flexDirection:"column",gap:14}}><Input label="Zimbra URL" value={p.url} onChange={set("url")} helper="Uses your existing browser session. Your password is never entered here." error={tried&&badUrl?"Enter a valid URL.":undefined}/>
         {!s.zimbra&&<Banner tone="warning" title="Zimbra login required.">Open Zimbra and sign in, then test the connection.</Banner>}

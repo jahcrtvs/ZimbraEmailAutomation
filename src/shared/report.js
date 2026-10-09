@@ -1,4 +1,4 @@
-import { fmt } from "./time.js";
+import { formatDate } from "./time.js";
 
 export const VARIABLES = ["date", "name", "role", "tasks", "topics", "weekly_plans", "blockers", "tomorrow"];
 export const DEFAULT_TEMPLATE = `TASK TODAY
@@ -54,10 +54,10 @@ export function polish(line, kind) {
 
 export const lines = (text, kind) => (text || "").split(/\r?\n/).map(l => polish(l, kind)).filter(Boolean);
 
-export function buildVars(n, user, date) {
+export function buildVars(n, user, date, dateFormat) {
   const plans = lines(n.tomorrow, "plans");
   return {
-    date: fmt(date), name: user.name, role: user.role,
+    date: formatDate(date, dateFormat), name: user.name, role: user.role,
     tasks: [
       ...lines(n.work, "tasks"),
       ...lines(n.progress, "progress").map(s => s.startsWith("Investigating") || s.startsWith("Continued") ? s : "Still working on: " + s.charAt(0).toLowerCase() + s.slice(1))
@@ -83,7 +83,7 @@ export function render(template, vars) {
   return blocks.filter(b => b.type !== "section" || b.items.length);
 }
 
-export const subjectFor = (tpl, date) => tpl.replace("{date}", fmt(date));
+export const subjectFor = (tpl, date, dateFormat) => tpl.replace("{date}", formatDate(date, dateFormat));
 export const hasNotes = n => Object.values(n).some(v => String(v).trim());
 
 export function blocksToText(blocks) {

@@ -75,7 +75,7 @@ export function NewDigestScreen({s,a}){
   const {Button,StatusBadge,Banner}=D();
   const stage=s.stage,review=["review","editing"].includes(stage),st=s.digestStatus,locked=["scheduled","prepared","sent"].includes(st);
   const showDoc=review||locked;
-  const subject=subjectFor(s.settings.email.defaultSubject,s.date);
+  const subject=subjectFor(s.settings.email.defaultSubject,s.date,s.settings.email.dateFormat);
   const bs=stage==="error"?"failed":stage==="generating"?"generating":st==="prepared"?"sending":locked?st:review?"ready":st==="draft"?"draft":"draft";
   const bl=stage==="error"?"Generation failed":st==="prepared"?"Prepared in Zimbra":stage==="editing"?"Editing":undefined;
   const ver=stage==="editing"?"Editing":locked?(st==="scheduled"?"Approved version Â· locked":"Read only"):s.savedAt?"Edited Â· Saved "+s.savedAt:"Generated "+s.genAt;

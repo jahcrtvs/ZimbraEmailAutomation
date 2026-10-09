@@ -30,7 +30,7 @@ export function useApp() {
     up({ toast: { message, tone, id } });
     later(() => up(p => p.toast && p.toast.id === id ? { toast: null } : {}), 3200);
   };
-  const subject = (c = ref.current) => subjectFor(c.settings.email.defaultSubject, c.date);
+  const subject = (c = ref.current) => subjectFor(c.settings.email.defaultSubject, c.date, c.settings.email.dateFormat);
 
   const maybeShowMissed = items => {
     const m = items.find(i => i.status === "missed" && !shownMissed.current.has(i.id));
@@ -100,7 +100,7 @@ export function useApp() {
       later(() => up({ genStep: 1 }), 600);
       later(() => up({ genStep: 2 }), 1200);
       try {
-        const blocks = await api().generate({ notes: c.notes, template: c.template, profile: c.settings.profile, date: toISODate(c.date), model: c.settings.ai.model, provider: c.settings.ai.provider });
+        const blocks = await api().generate({ notes: c.notes, template: c.template, profile: c.settings.profile, date: toISODate(c.date), dateFormat: c.settings.email.dateFormat, model: c.settings.ai.model, provider: c.settings.ai.provider });
         if (id !== genId.current) return;
         clear();
         up({ stage: "review", blocks, digestStatus: "ready", savedAt: null, genAt: formatTime(new Date()) });

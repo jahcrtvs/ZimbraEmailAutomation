@@ -9,7 +9,7 @@ export const DEFAULTS = () => ({
   settings: {
     general: { defaultSendTime: "5:00 PM" },
     profile: { name: "Mark Justine Dela Cruz", role: "CDP Trainee" },
-    email: { defaultRecipient: "manager@company.com", defaultSubject: "Daily Digest - {date}" },
+    email: { defaultRecipient: "manager@company.com", defaultSubject: "Daily Digest - {date}", dateFormat: "long" },
     zimbra: { url: "https://mail.company.local" },
     ai: { provider: "gemini", model: "flash" },
     app: { startWithWindows: true }

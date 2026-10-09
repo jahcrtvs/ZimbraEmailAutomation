@@ -33,7 +33,7 @@ export function TemplatesScreen({s,a}){
       </div></Card>
     </div>
   </div>;
-  const preview=render(text,buildVars(SAMPLE_NOTES,s.settings.profile,s.today));
+  const preview=render(text,buildVars(SAMPLE_NOTES,s.settings.profile,s.today,s.settings.email.dateFormat));
   const dirty=text!==s.template;
   React.useEffect(()=>{window.__ddSaveTemplate=()=>{if(dirty)a.saveTemplate(text);};return()=>{delete window.__ddSaveTemplate;};});
   return <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
@@ -47,7 +47,7 @@ export function TemplatesScreen({s,a}){
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:14,padding:"18px 28px 24px",background:"var(--surface-sunken)",minHeight:0}}>
         <div style={{display:"flex",justifyContent:"space-between"}}><Overline>Preview</Overline><span style={{font:"var(--text-meta)",color:"var(--fg-3)"}}>Filled with sample notes</span></div>
-        <div style={{flex:1,overflowY:"auto"}}><DigestDocument blocks={preview} subject={subjectFor(s.settings.email.defaultSubject,s.today)} to={s.settings.email.defaultRecipient}/></div>
+        <div style={{flex:1,overflowY:"auto"}}><DigestDocument blocks={preview} subject={subjectFor(s.settings.email.defaultSubject,s.today,s.settings.email.dateFormat)} to={s.settings.email.defaultRecipient}/></div>
       </div>
     </div>
   </div>;

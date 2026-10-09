@@ -1,6 +1,18 @@
 export const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 export const fmt = d => `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-export const fmtShort = d => `${MONTHS[d.getMonth()].slice(0, 3)} ${d.getDate()}`;
+const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const p2 = n => String(n).padStart(2, "0");
+// Date formats for the email subject and the {date} report variable.
+export const DATE_FORMATS = {
+  long: d => fmt(d),
+  weekday: d => `${DAYS[d.getDay()]}, ${fmt(d)}`,
+  short: d => `${MONTHS[d.getMonth()].slice(0, 3)} ${d.getDate()}, ${d.getFullYear()}`,
+  mdy: d => `${p2(d.getMonth() + 1)}/${p2(d.getDate())}/${d.getFullYear()}`,
+  dmy: d => `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()}`,
+  iso: d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`
+};
+export const formatDate = (d, format) => (DATE_FORMATS[format] || DATE_FORMATS.long)(d);
+export const fmtShort =d => `${MONTHS[d.getMonth()].slice(0, 3)} ${d.getDate()}`;
 
 export function parseTime(str) {
   const m = /^\s*(\d{1,2}):(\d{2})\s*(AM|PM)\s*$/i.exec(str || "");

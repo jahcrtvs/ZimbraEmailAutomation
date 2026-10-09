@@ -28,7 +28,7 @@ export function SendModal({s,a}){
   const {Modal,Button}=D();
   const row=(k,v)=><div style={{display:"grid",gridTemplateColumns:"80px 1fr",gap:12,padding:"10px 0",borderBottom:"1px solid var(--border-subtle)"}}><span style={{color:"var(--fg-3)"}}>{k}</span><span>{v}</span></div>;
   return <Modal title="Send Daily Digest" onClose={a.closeModal} width={440} footer={<><Button variant="ghost" onClick={a.closeModal}>Cancel</Button><Button variant="primary" iconRight="external-link" onClick={a.confirmSend}>Prepare in Zimbra</Button></>}>
-    <div>{row("Recipient",s.schedule.to)}{row("Subject",subjectFor(s.settings.email.defaultSubject,s.date))}</div>
+    <div>{row("Recipient",s.schedule.to)}{row("Subject",subjectFor(s.settings.email.defaultSubject,s.date,s.settings.email.dateFormat))}</div>
     <p style={{margin:"16px 0 0",color:"var(--fg-2)",textWrap:"pretty"}}>The current digest will be prepared in Zimbra. You review the message there and press Send yourself.</p>
   </Modal>;
 }
@@ -75,5 +75,5 @@ export function ViewModal({s,a}){
   const {Modal,Button}=D();const it=s.items.find(i=>i.id===s.modal.id);
   if(!it)return null;
   return <Modal title={"Daily Digest · "+fmt(it.date)} onClose={a.closeModal} width={620} footer={<Button variant="ghost" onClick={a.closeModal}>Close</Button>}>
-    <div style={{maxHeight:420,overflowY:"auto"}}><DigestDocument blocks={it.blocks} subject={it.subject||subjectFor(s.settings.email.defaultSubject,it.date)} to={it.to}/></div></Modal>;
+    <div style={{maxHeight:420,overflowY:"auto"}}><DigestDocument blocks={it.blocks} subject={it.subject||subjectFor(s.settings.email.defaultSubject,it.date,s.settings.email.dateFormat)} to={it.to}/></div></Modal>;
 }

@@ -7,15 +7,15 @@ export const GROQ_MODEL = "openai/gpt-oss-120b";
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const ENDPOINT =id => `https://generativelanguage.googleapis.com/v1beta/models/${id}:generateContent`;
 
-const PROMPT = `You rewrite a trainee developer's rough daily notes as the bullets of a status email to their manager.
-Write the way a careful, plain-spoken colleague would write it by hand, not the way an AI assistant would.
+const PROMPT = `You turn a trainee developer's rough daily notes (often just a few keywords) into the bullets of a formal status email to their manager.
+Write in a professional, formal tone, the way a conscientious employee writes a report to a supervisor.
 Rules:
-- One short sentence per item, ending with a period. Start with the verb. Use simple, concrete wording.
-- Work done: past tense ("Worked on ...", "Fixed ...", "Finished ..."). Study topics: "Studied ...". Plans: imperative ("Continue ...", "Finish ...").
-- Fix grammar, spelling and capitalisation of technical names (Hibernate, HQL, API, SQL, JDBC, ID, ORM, Java).
-- Keep the writer's own terms and meaning. If a note is terse or ambiguous, stay close to its original words instead of guessing what it means or inventing detail.
-- Never add facts, results, reasons or outcomes that are not in the notes. Never merge unrelated items. Skip empty input.
-- Avoid filler and AI-sounding style: no "successfully", "effectively", "comprehensive", "robust", "leveraged", "delved", "ensured", "furthermore", "additionally", no em dashes, no semicolons, no exclamation marks, no marketing or inflated tone, no trailing summary clauses.
+- Expand each note, even a single keyword, into one complete, well-formed sentence of about 12 to 25 words, ending with a period. Start with the verb.
+- Work done: past tense ("Completed ...", "Worked on ...", "Resolved ..."). Study topics: "Studied ..." or "Reviewed ...". Plans: future intent in the imperative ("Continue ...", "Complete ...", "Practice ...").
+- Use the context the keyword clearly implies to make the sentence read naturally, for example the general purpose of a lesson or what a task is part of (e.g. "lesson in hibernate" -> "Studied the Hibernate lesson, covering how Java objects are mapped to database tables using ORM.").
+- Fix grammar, spelling and capitalisation of technical names (Hibernate, Spring, Spring Boot, HQL, API, SQL, JDBC, ID, ORM, Java).
+- Never invent specific facts: no numbers, results, test outcomes, bug causes, deadlines, people or tools that the notes do not mention or clearly imply. Keep the writer's meaning. Never merge unrelated items. Skip empty input.
+- Keep it professional, not inflated: no "successfully", "comprehensive", "robust", "leveraged", "delved", "seamlessly", no em dashes, no exclamation marks, no marketing tone.
 Return ONLY JSON with exactly these keys, each an array of strings:
 {"tasks":[],"topics":[],"weekly_plans":[],"blockers":[]}
 - tasks: from "Today's Work" plus anything under "Still Working On" (phrase those as "Still working on: ...", or "Investigating ..." / "Continued ...").

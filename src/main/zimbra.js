@@ -29,12 +29,15 @@ export function createZimbra({ connect, ensure, selectors = SELECTORS }) {
       onStep(1);
       if (!(await loggedIn(page))) throw new ZimbraError("LOGIN", "Zimbra login required.");
       onStep(2);
+      // Earlier compose tabs stay in the DOM hidden, so only visible matches count.
+      const vis = sel => page.locator(sel).filter({ visible: true }).first();
       try {
         await page.locator(selectors.newMessage).first().click();
-        await page.locator(selectors.to).first().fill(to);
-        await page.locator(selectors.subject).first().fill(subject);
-        const scope = selectors.bodyFrame ? page.frameLocator(selectors.bodyFrame) : page;
-        await scope.locator(selectors.body).first().fill(body);
+        await vis(selectors.to).fill(to);
+        await vis(selectors.subject).fill(subject);
+        await vis(`${selectors.body}, ${selectors.bodyFrame}`).waitFor();
+        if (await vis(selectors.body).count()) await vis(selectors.body).fill(body);
+        else await vis(selectors.bodyFrame).contentFrame().locator(selectors.bodyInFrame).first().fill(body);
       } catch (e) { throw new ZimbraError("COMPOSE", "Could not fill the Zimbra message: " + String(e.message || e).replace(/\x1b\[[0-9;]*m/g, "")); }
       onStep(3);
     }

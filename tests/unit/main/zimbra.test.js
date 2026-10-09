@@ -3,12 +3,15 @@ import fs from "node:fs";
 import { createZimbra, ZimbraError } from "../../../src/main/zimbra.js";
 import { SELECTORS } from "../../../src/main/zimbra.selectors.js";
 
-function fakeBrowser({ loggedIn = true, hasPage = false } = {}) {
+function fakeBrowser({ loggedIn = true, hasPage = false, htmlBody = false } = {}) {
   const log = [];
   const locator = sel => ({
-    count: async () => (sel === SELECTORS.passwordField ? (loggedIn ? 0 : 1) : sel === SELECTORS.mailMarker ? (loggedIn ? 1 : 0) : 1),
+    count: async () => (sel === SELECTORS.passwordField ? (loggedIn ? 0 : 1) : sel === SELECTORS.mailMarker ? (loggedIn ? 1 : 0) : sel === SELECTORS.body && htmlBody ? 0 : 1),
     click: async () => log.push(["click", sel]),
     fill: async v => log.push(["fill", sel, v]),
+    waitFor: async () => {},
+    contentFrame: () => ({ locator: s => locator("frame:" + s) }),
+    filter() { return this; },
     first() { return this; }
   });
   const page = {
@@ -40,6 +43,19 @@ describe("zimbra", () => {
     expect(steps).toEqual([1, 2, 3]);
     expect(log).toEqual(expect.arrayContaining([["fill", SELECTORS.to, "a@b.co"], ["fill", SELECTORS.subject, "Subj"], ["fill", SELECTORS.body, "Body"]]));
     expect(log.some(e => /send/i.test(JSON.stringify(e)))).toBe(false);
+  });
+  it("fills the TinyMCE iframe body when there is no visible plain-text body", async () => {
+    const { browser, log } = fakeBrowser({ htmlBody: true });
+    const z = createZimbra({ connect: async () => browser, ensure: async () => {} });
+    await z.prepareMessage({ url: "https://z", to: "a@b.co", subject: "s", body: "Body" }, () => {});
+    expect(log).toContainEqual(["fill", "frame:" + SELECTORS.bodyInFrame, "Body"]);
+    expect(log.some(e => e[0] === "fill" && e[1] === SELECTORS.body)).toBe(false);
+  });
+  it("throws COMPOSE when the compose fields cannot be filled", async () => {
+    const { browser } = fakeBrowser();
+    const b = { ...browser, contexts: () => [{ pages: () => [], newPage: async () => { const p = await browser.contexts()[0].newPage(); return { ...p, locator: s => ({ ...p.locator(s), fill: async () => { throw new Error("timeout"); } }) }; } }] };
+    const z = createZimbra({ connect: async () => b, ensure: async () => {} });
+    await expect(z.prepareMessage({ url: "https://z", to: "a", subject: "s", body: "b" }, () => {})).rejects.toMatchObject({ code: "COMPOSE" });
   });
   it("throws LOGIN when the login form is showing, before touching compose", async () => {
     const { browser, log } = fakeBrowser({ loggedIn: false });

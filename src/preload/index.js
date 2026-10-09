@@ -3,7 +3,8 @@
 async function call(channel, ...args) {
   const r = await ipcRenderer.invoke(channel, ...args);
   if (r.ok) return r.value;
-  const e = new Error(r.error.message); e.code = r.error.code; throw e;
+  // contextBridge strips custom props (like .code) from Error objects; a plain object survives.
+  throw { code: r.error.code, message: r.error.message };
 }
 const on = channel => cb => {
   const fn = (_e, payload) => cb(payload);

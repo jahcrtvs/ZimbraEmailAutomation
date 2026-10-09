@@ -1,14 +1,14 @@
 import React from "react";
 import * as DS from "../ds";
 import { PageHeader, Overline, DigestDocument } from "../Shell.jsx";
-import { fmt, isValidEmail, dueAt, toISODate } from "@shared/time.js";
+import { fmt, isValidRecipients, dueAt, toISODate } from "@shared/time.js";
 import { subjectFor } from "@shared/report.js";
 import { Steps, lbl } from "./NewDigest.jsx";
 const D = () => DS;export function ScheduleModal({s,a}){
   const {Modal,Button,DatePicker,TimePicker,Input,Icon,Banner}=D();const m=s.modal;const edit=m.edit;
-  const src=edit?(m.id&&m.id!==s.curId?s.items.find(i=>i.id===m.id):s.schedule):{...s.schedule,date:s.date};
+  const src=edit?(m.id&&m.id!==s.curId?s.items.find(i=>i.id===m.id):s.schedule):{...s.schedule,date:toISODate(s.date)<toISODate(s.today)?s.today:s.date};
   const [d,setD]=React.useState(src.date);const [t,setT]=React.useState(src.time||s.settings.general.defaultSendTime);const [to,setTo]=React.useState(src.to);
-  const bad=!isValidEmail(to);
+  const bad=!isValidRecipients(to);
   const due=dueAt(toISODate(d),t);const past=!due||due<=new Date();
   const editId=edit?(m.id||s.curId):undefined;
   const confirm=()=>{if(past||bad)return;a.confirmSchedule({date:d,time:t,to},editId);};
@@ -19,7 +19,7 @@ const D = () => DS;export function ScheduleModal({s,a}){
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><DatePicker label="Date" value={d} onChange={setD} minDate={s.today}/><TimePicker label="Time" value={t} onChange={setT}/></div>
         {past&&<div role="alert" style={{font:"var(--text-helper)",color:"var(--status-danger)",marginTop:6}}>Choose a time in the future.</div>}
       </div>
-      <Input label="Recipient" value={to} onChange={setTo} error={bad?"Enter a valid email address.":undefined}/>
+      <Input label="Recipients" value={to} onChange={setTo} helper="Separate multiple addresses with commas." error={bad?"Enter valid email addresses, separated by commas.":undefined}/>
       <div style={{display:"flex",gap:10,paddingTop:16,borderTop:"1px solid var(--border-subtle)",font:"var(--text-body)",color:"var(--fg-2)"}}><span style={{color:"var(--fg-3)",paddingTop:2}}><Icon name="lock" size={15}/></span><span style={{textWrap:"pretty"}}>The current approved version of this digest will be used when the email is prepared. At that time Zimbra is opened and the email is filled in. <b style={{color:"var(--fg-1)",fontWeight:600}}>You press Send.</b></span></div>
     </div>
   </Modal>;

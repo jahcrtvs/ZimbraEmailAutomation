@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fmt, fmtShort, parseTime, toISODate, fromISODate, dueAt, formatTime, dayLabel, isValidEmail } from "@shared/time.js";
+import { fmt, fmtShort, parseTime, toISODate, fromISODate, dueAt, formatTime, dayLabel, isValidEmail, parseEmails, isValidRecipients } from "@shared/time.js";
 
 describe("time helpers", () => {
   it("formats dates", () => {
@@ -40,5 +40,12 @@ describe("time helpers", () => {
     expect(isValidEmail("manager@company.com")).toBe(true);
     expect(isValidEmail("manager@company")).toBe(false);
     expect(isValidEmail("a b@c.com")).toBe(false);
+  });
+  it("accepts one or more recipients separated by commas, semicolons or spaces", () => {
+    expect(parseEmails(" a@x.com, b@y.org;c@z.net  ")).toEqual(["a@x.com", "b@y.org", "c@z.net"]);
+    expect(isValidRecipients("a@x.com")).toBe(true);
+    expect(isValidRecipients("a@x.com, b@y.org")).toBe(true);
+    expect(isValidRecipients("a@x.com, nope")).toBe(false);
+    expect(isValidRecipients(" , ")).toBe(false);
   });
 });

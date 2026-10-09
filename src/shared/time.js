@@ -35,3 +35,6 @@ export function dayLabel(d, today) {
 }
 
 export const isValidEmail = s => /^\S+@\S+\.\S+$/.test(s || "");
+// A recipient field may hold several addresses separated by commas, semicolons or spaces.
+export const parseEmails = s => String(s || "").split(/[,;\s]+/).filter(Boolean);
+export const isValidRecipients = s => { const l = parseEmails(s); return l.length > 0 && l.every(isValidEmail); };

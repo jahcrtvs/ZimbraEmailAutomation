@@ -1,5 +1,6 @@
 ﻿import { ZimbraError } from "./zimbra.errors.js";
 import { SELECTORS } from "./zimbra.selectors.js";
+import { parseEmails } from "../shared/time.js";
 export { ZimbraError };
 
 // Prepare-only: opens a New Message and fills To/Subject/Body. There is deliberately no code
@@ -35,7 +36,7 @@ export function createZimbra({ connect, ensure, selectors = SELECTORS }) {
         await page.locator(selectors.newMessage).first().click();
         // The To field runs autocomplete/bubble handlers per keystroke and clobbers a bulk fill(),
         // so type it like a user; the trailing ";" makes Zimbra commit the typed address as a bubble.
-        await vis(selectors.to).pressSequentially(to + ";", { delay: 40 });
+        await vis(selectors.to).pressSequentially(parseEmails(to).map(e => e + ";").join(" "), { delay: 40 });
         await vis(selectors.subject).fill(subject);
         await vis(`${selectors.body}, ${selectors.bodyFrame}`).waitFor();
         if (await vis(selectors.body).count()) await vis(selectors.body).fill(body);

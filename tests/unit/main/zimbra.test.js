@@ -45,6 +45,12 @@ describe("zimbra", () => {
     expect(log).toEqual(expect.arrayContaining([["type", SELECTORS.to, "a@b.co;"], ["fill", SELECTORS.subject, "Subj"], ["fill", SELECTORS.body, "Body"]]));
     expect(log.some(e => /send/i.test(JSON.stringify(e)))).toBe(false);
   });
+  it("types each of several recipients followed by ';'", async () => {
+    const { browser, log } = fakeBrowser();
+    const z = createZimbra({ connect: async () => browser, ensure: async () => {} });
+    await z.prepareMessage({ url: "https://z", to: "a@x.com, b@y.org", subject: "s", body: "b" }, () => {});
+    expect(log).toContainEqual(["type", SELECTORS.to, "a@x.com; b@y.org;"]);
+  });
   it("fills the TinyMCE iframe body when there is no visible plain-text body", async () => {
     const { browser, log } = fakeBrowser({ htmlBody: true });
     const z = createZimbra({ connect: async () => browser, ensure: async () => {} });

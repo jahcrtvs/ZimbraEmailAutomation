@@ -1,4 +1,4 @@
-import { dueAt, isValidEmail } from "../shared/time.js";
+import { dueAt, isValidRecipients } from "../shared/time.js";
 
 export function createScheduler({ store, now = () => new Date(), prepare, notify = () => {}, onChange = () => {}, intervalMs = 30000 }) {
   let busy = false, timer = null;
@@ -8,7 +8,7 @@ export function createScheduler({ store, now = () => new Date(), prepare, notify
   const remove = id => commit(items => items.filter(i => i.id !== id));
   function upsert(item) {
     if (!dueAt(item.date, item.time)) throw new Error("Invalid date or time.");
-    if (!isValidEmail(item.recipient)) throw new Error("Enter a valid email address.");
+    if (!isValidRecipients(item.recipient)) throw new Error("Enter a valid email address.");
     return commit(items => items.some(i => i.id === item.id) ? items.map(i => i.id === item.id ? item : i) : [...items, item]);
   }
   function markOverdueMissed() {

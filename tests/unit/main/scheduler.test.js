@@ -68,6 +68,7 @@ describe("scheduler", () => {
     const s = make();
     expect(() => s.upsert(item({ time: "noon" }))).toThrow(/date or time/i);
     expect(() => s.upsert(item({ recipient: "nope" }))).toThrow(/valid email/i);
+    expect(() => s.upsert(item({ recipient: "a@x.com, b@y.org" }))).not.toThrow();
   });
   it("upsert replaces by id, setStatus and remove work, onChange fires", () => {
     const s = make(); s.upsert(item()); s.upsert(item({ time: "6:00 PM" }));

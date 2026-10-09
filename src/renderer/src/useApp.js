@@ -1,5 +1,5 @@
 import React from "react";
-import { fmt, toISODate, formatTime } from "@shared/time.js";
+import { fmt, toISODate, fromISODate, formatTime } from "@shared/time.js";
 import { hasNotes, EMPTY_NOTES, SAMPLE_NOTES, DEFAULT_TEMPLATE, subjectFor, blocksToText } from "@shared/report.js";
 import { itemFromDisk, itemToDisk, historyFromDisk, historyToDisk } from "./persist.js";
 
@@ -48,7 +48,9 @@ export function useApp() {
     api().store.load().then(async d => {
       const settings = d.settings;
       const today = new Date();
-      setS(p => ({ ...p, settings, hasKey: d.hasKey, template: d.template.body, today, date: today,
+      // Restore a back-filled digest date from the draft; never a future one.
+      const saved = /^\d{4}-\d{2}-\d{2}$/.test(d.draft.date || "") && hasNotes(d.draft.notes) && d.draft.date < toISODate(today) ? fromISODate(d.draft.date) : today;
+      setS(p => ({ ...p, settings, hasKey: d.hasKey, template: d.template.body, today, date: saved,
         notes: { ...EMPTY_NOTES, ...d.draft.notes }, digestStatus: hasNotes(d.draft.notes) ? "draft" : "none",
         history: d.history.map(historyFromDisk), items: d.schedule.map(itemFromDisk),
         schedule: { date: today, time: settings.general.defaultSendTime, to: settings.email.defaultRecipient } }));
@@ -64,9 +66,9 @@ export function useApp() {
   // ---- autosave notes (debounced)
   React.useEffect(() => {
     if (!ready) return;
-    const t = setTimeout(() => api().store.save("draft", { notes: s.notes }), 600);
+    const t = setTimeout(() => api().store.save("draft", { notes: s.notes, date: toISODate(s.date) }), 600);
     return () => clearTimeout(t);
-  }, [s.notes, ready]);
+  }, [s.notes, s.date, ready]);
 
   async function runPrepare({ to, subj, blocks, forCur }) {
     clear();
@@ -87,7 +89,8 @@ export function useApp() {
     newDigest: () => { const c = ref.current; if (["none", "sent"].includes(c.digestStatus)) a.resetDigest(); else up({ page: "new" }); },
     resetDigest: () => { clear(); const now = new Date(); up(p => ({ page: "new", stage: "form", notes: { ...EMPTY_NOTES }, blocks: [], draft: {}, digestStatus: "none", savedAt: null, sentAt: null, curId: null, date: now, today: now, modal: null, genError: null })); api().store.save("draft", { notes: { ...EMPTY_NOTES } }); },
     setNotes: notes => up(p => ({ notes, digestStatus: p.digestStatus === "none" ? "draft" : p.digestStatus })),
-    fillSample: () => up({ notes: { ...SAMPLE_NOTES }, digestStatus: "draft" }),
+    setDate: date => up({ date }),
+    fillSample:() => up({ notes: { ...SAMPLE_NOTES }, digestStatus: "draft" }),
     async generate() {
       const c = ref.current;
       if (!hasNotes(c.notes)) return;

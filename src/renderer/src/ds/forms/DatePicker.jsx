@@ -3,7 +3,7 @@ import { Icon } from "../core/Icon.jsx";
 import { Field, fieldBox } from "./Field.jsx";
 const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
 export function formatDate(d){return MONTHS[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear();}
-export function DatePicker({label,helper,value,onChange,minDate,style}){
+export function DatePicker({label,helper,value,onChange,minDate,maxDate,style}){
   const [open,setOpen]=React.useState(false);
   const d=value||new Date();const [view,setView]=React.useState(new Date(d.getFullYear(),d.getMonth(),1));
   const ref=React.useRef(null);
@@ -25,7 +25,7 @@ export function DatePicker({label,helper,value,onChange,minDate,style}){
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,textAlign:"center"}}>
           {["M","T","W","T","F","S","S"].map((w,i)=><span key={i} style={{font:"500 11px/24px var(--font-sans)",color:"var(--fg-3)"}}>{w}</span>)}
-          {cells.map((n,i)=>{if(!n)return <span key={i}/>;const cd=new Date(view.getFullYear(),view.getMonth(),n);const sel=same(cd,d);const dis=minDate&&cd<new Date(minDate.toDateString());
+          {cells.map((n,i)=>{if(!n)return <span key={i}/>;const cd=new Date(view.getFullYear(),view.getMonth(),n);const sel=same(cd,d);const dis=(minDate&&cd<new Date(minDate.toDateString()))||(maxDate&&cd>new Date(maxDate.toDateString()));
             return <button type="button" key={i} disabled={dis} onClick={()=>{onChange&&onChange(cd);setOpen(false)}} style={{height:30,border:same(cd,today)&&!sel?"1px solid var(--border-strong)":"1px solid transparent",borderRadius:"50%",background:sel?"var(--surface-accent)":"transparent",color:sel?"var(--fg-on-accent)":dis?"var(--fg-3)":"var(--fg-1)",opacity:dis?.4:1,font:"500 12px/1 var(--font-sans)",cursor:dis?"default":"pointer"}}>{n}</button>})}
         </div>
       </div>}

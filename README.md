@@ -14,7 +14,7 @@ A Windows desktop app that turns rough daily notes into a formal status email, t
 
 ### Features
 
-- **AI-written sentences** from keyword notes, using Gemini or Groq. Without an API key it falls back to simple built-in text rules.
+- **AI-written sentences** from keyword notes, written by a small model running on your own computer through Ollama. Your notes stay on your PC. If the local model fails you can optionally let Groq or Gemini take over, with your approval and with names, emails and links hidden first. With no AI at all it uses simple built-in text rules.
 - **Multiple recipients.** Separate addresses with commas, semicolons or spaces.
 - **Back-dated digests.** A "Digest date" picker (today or earlier) lets you fill in days you missed. The date drives the subject and the report.
 - **Configurable date format** for the subject and the report date: `October 9, 2026`, `Friday, October 9, 2026`, `Oct 9, 2026`, `10/09/2026`, `09/10/2026` or `2026-10-09`.
@@ -36,7 +36,8 @@ Download the latest installer from the [Releases page](https://github.com/jahcrt
 - Windows 10 or 11 (x64).
 - Google Chrome installed. The app drives Chrome to reach Zimbra.
 - An account on your company's Zimbra webmail.
-- Optional: a [Gemini](https://aistudio.google.com/) or [Groq](https://console.groq.com/) API key for the AI-written sentences.
+- [Ollama](https://ollama.com/download) with a small model for the AI-written sentences (see [Set up the local AI](#set-up-the-local-ai)). A PC with 8 GB of RAM can run the default model; 16 GB or a GPU is more comfortable.
+- Optional: a [Groq](https://console.groq.com/) or [Gemini](https://aistudio.google.com/) API key, used only as a fallback when the local AI fails.
 
 ## First-time setup
 
@@ -48,9 +49,47 @@ Open **Settings** and fill in:
 | Profile | Your name and role (used in the sign-off) |
 | Email | Default recipients, default subject (`{date}` is replaced), date format |
 | Zimbra | The URL of your Zimbra webmail |
-| AI Provider | Provider (Gemini or Groq), model, and your API key |
+| Local AI | Server address and model (the defaults work with Ollama). Click **Save and check** |
+| Cloud fallback | Optional. Provider (None, Groq or Gemini), ask-each-time or automatic, API key, words to hide |
 
 Then click **Open Zimbra** (in the Zimbra status dialog or from the prepared-email panel). The app opens its own Chrome window. **Sign in to Zimbra there once.** The session is kept in a dedicated Chrome profile, so you normally will not need to sign in again.
+
+## Set up the local AI
+
+Daily Digest writes the sentences with a small AI model that runs on your own computer through [Ollama](https://ollama.com). Nothing is sent to the internet for this.
+
+1. Install **Ollama for Windows** from <https://ollama.com/download>. After installing, it runs in the background (look for the llama icon in the system tray).
+2. Open PowerShell and download the model once (about 2 GB):
+
+   ```bash
+   ollama pull qwen2.5:3b-instruct
+   ```
+
+   On a PC with 16 GB of RAM or a GPU you can use a larger model for better wording (about 4.7 GB):
+
+   ```bash
+   ollama pull qwen2.5:7b-instruct
+   ```
+
+   Then type that model name into **Settings > Local AI > Model**.
+3. In **Settings > Local AI**, click **Save and check**. The badge should say **Ready**.
+4. Generate a digest. On a laptop without a GPU expect it to take a few seconds up to about half a minute. The first digest after a long pause is slower because the model has to load into memory.
+
+If the badge says **Not running** or **Model missing**, Settings shows what to do. See [Troubleshooting](#troubleshooting).
+
+Do not pick a model whose name ends in `-cloud` or `:cloud`. Ollama runs those on its own servers, so your notes would leave your computer. Settings warns you if you do.
+
+Other servers that speak the OpenAI chat API (LM Studio, llama.cpp) may work if you change the server address, but only Ollama is tested.
+
+### Optional cloud fallback
+
+If the local AI fails (for example Ollama is not running) you can let one cloud provider write the digest instead.
+
+- Choose the provider in **Settings > Cloud fallback** and paste its API key. The key is encrypted on your computer.
+- By default the app **asks you each time** and shows the exact text it would send. You can switch to **Send automatically**.
+- Before anything is sent, emails, links, IP addresses, phone numbers, long tokens, your name and the words you list are replaced with placeholders, then put back in the result. Notes that look like they contain a password or key, or that are very long, are never sent.
+- A digest written by a cloud service says so in a banner. Settings lists your last cloud sends (time, provider, reason, size, never the content).
+- Free Gemini API usage may be used by Google to improve its products. Prefer Groq, or a paid Gemini project, if your notes are sensitive.
 
 ## Using it
 
@@ -88,17 +127,17 @@ You can view, edit or cancel scheduled digests on the **Scheduled** page.
 
 ## How AI generation works
 
-- Each note is sent to the provider you chose in Settings, with instructions to write one formal sentence per item, fix the spelling of technical names, and never invent facts, numbers or results.
-- Transient errors (rate limits, server errors) are retried automatically, up to 3 attempts.
-- If the call fails, you see an error banner. Your notes are kept and **Try Again** re-runs the request.
-- With no API key saved, the app uses its built-in text rules instead.
-- Always read the report before sending. The model may add general context that a keyword implies, and that context can be wrong.
+- The local model gets your notes with instructions to write one formal sentence per item, fix the spelling of technical names, and never invent facts, numbers or results. If its answer is not usable it is asked once more.
+- If the local model fails, you see why (not running, model missing, too slow, unusable answer). Then, depending on your Cloud fallback settings, the app asks before sending sanitised notes to the cloud, sends them automatically, or builds the digest with its built-in text rules. Your notes are never lost.
+- Cloud calls retry rate-limit and server errors up to 3 times. If the cloud also fails, the built-in text rules are used.
+- Always read the report before sending. A small model may add general context that a keyword implies, and that context can be wrong.
 
 ## Privacy and safety
 
 - **No Zimbra password** is ever typed, read or stored. You sign in yourself in Chrome.
-- **API keys** are encrypted with Windows (Electron `safeStorage`) and stay in the main process. The settings screen can write a key but can never read it back.
-- Only the text of your notes is sent to the AI provider you select. Your Zimbra content is never sent anywhere.
+- **API keys** (only needed for the optional cloud fallback) are encrypted with Windows (Electron `safeStorage`) and stay in the main process. The settings screen can write a key but can never read it back.
+- With the local AI, your notes go only to the Ollama server on your own computer. The main process, not the screen, decides what is sent and where, from your saved settings.
+- Only the sanitised text of your notes can ever go to a cloud provider, and only after you approve it (or turn on automatic sending). Your Zimbra content is never sent anywhere.
 - All data is stored locally as JSON files in the app's user-data folder (history, schedule, template, settings and your current draft).
 - If a key was ever shown in a chat, a log or a commit, treat it as exposed and revoke it at the provider.
 
@@ -112,6 +151,11 @@ You can view, edit or cancel scheduled digests on the **Scheduled** page.
 | "Unable to prepare the email." | Zimbra opened but the message could not be filled in. The details show which field failed. Close any old compose tab and retry. |
 | A recipient comes through wrong | The app reads the To field back and reports any address Zimbra altered. Retry, or open Zimbra and correct it. |
 | Scheduled digest did not run | The app must be running at the due time. Missed items are offered on next launch. |
+| "Local AI is not running." | Install Ollama from <https://ollama.com/download> and start it, then **Save and check** in Settings. If Ollama is on another port or machine, change the server address. |
+| "Model not installed." | Run the command Settings shows, for example `ollama pull qwen2.5:3b-instruct`, then check again. |
+| "The local model took too long to answer." | The first run after a pause loads the model and can be slow. Try again, or pick a smaller model. |
+| "AI was not used for this digest." | The banner says why. The digest was built with the built-in text rules. Fix the cause and click **Regenerate**. |
+| The cloud dialog never appears | You have no fallback provider or key saved, so the app goes straight to the built-in rules. |
 
 The selectors that find Zimbra's fields live in `src/main/zimbra.selectors.js`. They were written for the classic Zimbra web client and might need adjusting for your server. Run `node scripts/probe-zimbra.mjs <your-zimbra-url>` with the New Message window open to list the real element ids.
 
@@ -177,6 +221,8 @@ Known limits:
 - The installer is unsigned.
 - Windows only.
 - The Groq model name and its JSON mode have not been checked against Groq's current model list.
+- Small local models can phrase things oddly or add context a keyword only hints at. Read the report before sending.
+- To compare models on your own notes, run `node scripts/try-local.mjs notes.json qwen2.5:3b-instruct qwen2.5:7b-instruct` (needs Ollama running).
 
 ## License
 

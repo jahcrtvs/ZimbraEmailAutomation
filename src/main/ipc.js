@@ -1,4 +1,5 @@
-﻿const AI_PROVIDERS = ["gemini", "groq"];
+const AI_PROVIDERS = ["gemini", "groq"];
+const MODES = ["auto", "cloud", "template"];
 const SAVEABLE =["history", "template", "settings", "draft"];
 
 const wrap = fn => async (_e, ...args) => {
@@ -9,14 +10,20 @@ const httpUrl = u => { let p; try { p = new URL(u); } catch { throw new Error("I
 
 export function registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, send }) {
   const h = (ch, fn) => ipcMain.handle(ch, wrap(fn));
-  const provider = p => { if (!AI_PROVIDERS.includes(p)) throw new Error("Unknown provider."); return p; };
+  const checkProvider = p => { if (!AI_PROVIDERS.includes(p)) throw new Error("Unknown provider."); return p; };
+  // The renderer never supplies AI settings: what gets sent, and where, is decided from the stored settings.
+  const ai = () => store.read("settings").ai;
   h("store:load", () => ({ ...store.readAll(), hasKey: { gemini: secrets.hasKey("gemini"), groq: secrets.hasKey("groq") } }));
   h("store:save", (name, data) => { if (!SAVEABLE.includes(name)) throw new Error("Cannot save " + name); store.write(name, data); return true; });
   h("schedule:upsert", item => scheduler.upsert(item));
   h("schedule:setStatus", (id, status) => scheduler.setStatus(id, status));
-  h("ai:generate", p => generator.generate(p));
-  h("ai:test", (model, p = "gemini") => generator.testConnection(model, provider(p)));
-  h("ai:setKey", (key, p = "gemini") => { secrets.setKey(key, provider(p)); return true; });
+  h("ai:generate", ({ notes, template, profile, date, dateFormat, mode = "auto" }) => {
+    if (!MODES.includes(mode)) throw new Error("Unknown mode.");
+    return generator.generate({ notes, template, profile, date, dateFormat, mode, ai: ai() });
+  });
+  h("ai:status", () => generator.localStatus(ai().local));
+  h("ai:test", p => generator.testConnection(checkProvider(p), ai().geminiModel));
+  h("ai:setKey", (key, p = "gemini") => { secrets.setKey(key, checkProvider(p)); return true; });
   h("zimbra:check", url => zimbra.checkSession(httpUrl(url)));
   h("zimbra:open", async url => { await zimbra.openPage(httpUrl(url)); return true; });
   h("zimbra:prepare", async ({ url, to, subject, body }) => {

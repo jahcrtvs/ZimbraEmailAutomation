@@ -26,7 +26,7 @@ describe("ipc", () => {
   it("loads everything plus hasKey", async () => {
     const r = await call("store:load");
     expect(r.ok).toBe(true);
-    expect(Object.keys(r.value).sort()).toEqual(["draft", "hasKey", "history", "schedule", "settings", "template"]);
+    expect(Object.keys(r.value).sort()).toEqual(["audit", "draft", "hasKey", "history", "schedule", "settings", "template"]);
   });
   it("saves only whitelisted collections (schedule is main-owned)", async () => {
     expect((await call("store:save", "history", [])).ok).toBe(true);

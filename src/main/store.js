@@ -1,17 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
 import { DEFAULT_TEMPLATE, VARIABLES, EMPTY_NOTES } from "../shared/report.js";
+import { DEFAULT_LOCAL } from "../shared/ai.js";
 
 export const DEFAULTS = () => ({
   history: [],
   schedule: [],
+  audit: [],
   template: { id: "daily-digest", name: "Daily Digest", body: DEFAULT_TEMPLATE, variables: [...VARIABLES] },
   settings: {
     general: { defaultSendTime: "5:00 PM" },
     profile: { name: "Mark Justine Dela Cruz", role: "CDP Trainee" },
     email: { defaultRecipient: "manager@company.com", defaultSubject: "Daily Digest - {date}", dateFormat: "long" },
     zimbra: { url: "https://mail.company.local" },
-    ai: { provider: "gemini", model: "flash" },
+    ai: { local: { ...DEFAULT_LOCAL }, fallback: { provider: "groq", auto: false }, geminiModel: "flash", privacyTerms: "" },
     app: { startWithWindows: true }
   },
   draft: { notes: { ...EMPTY_NOTES } }
@@ -27,6 +29,16 @@ function merge(def, val) {
   return out;
 }
 
+// Settings written before local AI existed had ai: { provider, model }.
+function migrateSettings(raw) {
+  const ai = raw?.ai;
+  if (!isObj(ai) || "local" in ai || "fallback" in ai) return raw;
+  const next = { ...ai };
+  if (["gemini", "groq"].includes(ai.provider)) next.fallback = { provider: ai.provider, auto: false };
+  if (["flash", "pro"].includes(ai.model)) next.geminiModel = ai.model;
+  return { ...raw, ai: next };
+}
+
 export function createStore(dir) {
   fs.mkdirSync(dir, { recursive: true });
   const file = n => path.join(dir, n + ".json");
@@ -37,7 +49,7 @@ export function createStore(dir) {
     const def = DEFAULTS()[name];
     let raw;
     try { raw = fs.readFileSync(file(name), "utf8"); } catch { return def; }
-    try { return merge(def, JSON.parse(raw)); }
+    try { const parsed = JSON.parse(raw); return merge(def, name === "settings" ? migrateSettings(parsed) : parsed); }
     catch {
       try { fs.renameSync(file(name), file(name) + ".bad"); } catch { /* keep going */ }
       return def;

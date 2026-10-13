@@ -11,7 +11,8 @@ const initial = () => ({
   page: "new", stage: "form", notes: { ...EMPTY_NOTES }, today: new Date(), date: new Date(), blocks: [], draft: {},
   digestStatus: "none", schedule: { date: new Date(), time: "5:00 PM", to: "" }, items: [], modal: null, zimbra: false, toast: null,
   genAt: null, savedAt: null, sentAt: null, history: [], historySel: null, template: DEFAULT_TEMPLATE,
-  settings: null, hasKey: { gemini: false, groq: false }, genStep: 0, prepStep: 0, testing: false, testingAI: false, curId: null, genError: null, modalDetails: null, modalCode: null
+  settings: null, hasKey: { gemini: false, groq: false }, genStep: 0, prepStep: 0, testing: false, testingAI: false, curId: null, genError: null, modalDetails: null, modalCode: null,
+  aiSource: null, aiNote: null, cloudAsk: null, audit: [], localStatus: null, checkingLocal: false
 });
 
 export function useApp() {
@@ -50,7 +51,7 @@ export function useApp() {
       const today = new Date();
       // Restore a back-filled digest date from the draft; never a future one.
       const saved = /^\d{4}-\d{2}-\d{2}$/.test(d.draft.date || "") && hasNotes(d.draft.notes) && d.draft.date < toISODate(today) ? fromISODate(d.draft.date) : today;
-      setS(p => ({ ...p, settings, hasKey: d.hasKey, template: d.template.body, today, date: saved,
+      setS(p => ({ ...p, settings, hasKey: d.hasKey, audit: d.audit, template: d.template.body, today, date: saved,
         notes: { ...EMPTY_NOTES, ...d.draft.notes }, digestStatus: hasNotes(d.draft.notes) ? "draft" : "none",
         history: d.history.map(historyFromDisk), items: d.schedule.map(itemFromDisk),
         schedule: { date: today, time: settings.general.defaultSendTime, to: settings.email.defaultRecipient } }));
@@ -87,23 +88,28 @@ export function useApp() {
   const a = {
     go: page => up({ page, historySel: null }),
     newDigest: () => { const c = ref.current; if (["none", "sent"].includes(c.digestStatus)) a.resetDigest(); else up({ page: "new" }); },
-    resetDigest: () => { clear(); const now = new Date(); up(p => ({ page: "new", stage: "form", notes: { ...EMPTY_NOTES }, blocks: [], draft: {}, digestStatus: "none", savedAt: null, sentAt: null, curId: null, date: now, today: now, modal: null, genError: null })); api().store.save("draft", { notes: { ...EMPTY_NOTES } }); },
+    resetDigest: () => { clear(); const now = new Date(); up(p => ({ page: "new", stage: "form", notes: { ...EMPTY_NOTES }, blocks: [], draft: {}, digestStatus: "none", savedAt: null, sentAt: null, curId: null, date: now, today: now, modal: null, genError: null, aiSource: null, aiNote: null, cloudAsk: null })); api().store.save("draft", { notes: { ...EMPTY_NOTES } }); },
     setNotes: notes => up(p => ({ notes, digestStatus: p.digestStatus === "none" ? "draft" : p.digestStatus })),
     setDate: date => up({ date }),
     fillSample:() => up({ notes: { ...SAMPLE_NOTES }, digestStatus: "draft" }),
-    async generate() {
+    generate: () => a.run("auto"),
+    cloudSend: () => a.run("cloud"),
+    cloudDecline: () => a.run("template"),
+    async run(mode) {
       const c = ref.current;
       if (!hasNotes(c.notes)) return;
       clear();
       const id = ++genId.current;
-      up({ page: "new", stage: "generating", genStep: 0, modal: null, genError: null });
+      up({ page: "new", stage: "generating", genStep: 0, modal: null, genError: null, cloudAsk: null });
       later(() => up({ genStep: 1 }), 600);
       later(() => up({ genStep: 2 }), 1200);
       try {
-        const blocks = await api().generate({ notes: c.notes, template: c.template, profile: c.settings.profile, date: toISODate(c.date), dateFormat: c.settings.email.dateFormat, model: c.settings.ai.model, provider: c.settings.ai.provider });
+        const r = await api().generate({ notes: c.notes, template: c.template, profile: c.settings.profile, date: toISODate(c.date), dateFormat: c.settings.email.dateFormat, mode });
         if (id !== genId.current) return;
         clear();
-        up({ stage: "review", blocks, digestStatus: "ready", savedAt: null, genAt: formatTime(new Date()) });
+        if (r.status === "needs-consent") { up({ modal: { t: "cloud" }, cloudAsk: r }); return; }
+        up({ stage: "review", blocks: r.blocks, aiSource: r.source, aiNote: r.note, digestStatus: "ready", savedAt: null, genAt: formatTime(new Date()) });
+        if (r.source === "groq" || r.source === "gemini") api().store.load().then(d => up({ audit: d.audit }), () => {});
       } catch (e) {
         if (id !== genId.current) return;
         clear();
@@ -171,15 +177,21 @@ export function useApp() {
     saveTemplate: tpl => { up({ template: tpl }); api().store.save("template", { ...{ id: "daily-digest", name: "Daily Digest" }, body: tpl, variables: ["date", "name", "role", "tasks", "topics", "weekly_plans", "blockers", "tomorrow"] }); toast("Template saved."); },
     async saveSettings({ settings, apiKey }) {
       await api().store.save("settings", settings);
-      if (apiKey && apiKey.trim()) { const prov = settings.ai.provider; await api().setApiKey(apiKey, prov); up(p => ({ hasKey: { ...p.hasKey, [prov]: true } })); }
+      const prov = settings.ai.fallback.provider;
+      if (apiKey && apiKey.trim() && prov !== "none") { await api().setApiKey(apiKey, prov); up(p => ({ hasKey: { ...p.hasKey, [prov]: true } })); }
       up(p => ({ settings, schedule: p.digestStatus === "scheduled" ? p.schedule : { ...p.schedule, to: settings.email.defaultRecipient, time: settings.general.defaultSendTime } }));
       toast("Settings saved.");
     },
-    async testAI() {
+    async testAI(provider) {
       up({ testingAI: true });
-      try { await api().testAI(ref.current.settings.ai.model, ref.current.settings.ai.provider); toast("Connection OK."); }
+      try { await api().testAI(provider); toast("Connection OK."); }
       catch (e) { toast("Unable to connect: " + e.message, "danger"); }
       up({ testingAI: false });
+    },
+    async checkLocal() {
+      up({ checkingLocal: true });
+      try { up({ localStatus: await api().localStatus(), checkingLocal: false }); }
+      catch (e) { up({ localStatus: { state: "no-server", detail: e.message }, checkingLocal: false }); }
     }
   };
   function disk(items) { applyItems(items); }

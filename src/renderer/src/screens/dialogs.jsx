@@ -3,6 +3,7 @@ import * as DS from "../ds";
 import { PageHeader, Overline, DigestDocument } from "../Shell.jsx";
 import { fmt, isValidRecipients, dueAt, toISODate } from "@shared/time.js";
 import { subjectFor } from "@shared/report.js";
+import { PROVIDER_NAMES } from "@shared/ai.js";
 import { Steps, lbl } from "./NewDigest.jsx";
 const D = () => DS;export function ScheduleModal({s,a}){
   const {Modal,Button,DatePicker,TimePicker,Input,Icon,Banner}=D();const m=s.modal;const edit=m.edit;
@@ -76,4 +77,10 @@ export function ViewModal({s,a}){
   if(!it)return null;
   return <Modal title={"Daily Digest · "+fmt(it.date)} onClose={a.closeModal} width={620} footer={<Button variant="ghost" onClick={a.closeModal}>Close</Button>}>
     <div style={{maxHeight:420,overflowY:"auto"}}><DigestDocument blocks={it.blocks} subject={it.subject||subjectFor(s.settings.email.defaultSubject,it.date,s.settings.email.dateFormat)} to={it.to}/></div></Modal>;
+}
+export function CloudConsentDialog({s,a}){
+  const {ConfirmDialog}=D();const c=s.cloudAsk,name=PROVIDER_NAMES[c.provider];
+  return <ConfirmDialog tone="warning" icon="triangle-alert" title="The local AI didn't work." description={<>{c.failure?.message} Send your notes to {name} instead? Only the text below is sent. Emails, links, phone numbers and names are replaced with placeholders first.</>} confirmLabel={"Send to "+name} cancelLabel="Use plain template" onConfirm={a.cloudSend} onCancel={a.cloudDecline}>
+    <pre aria-label="Text that would be sent" style={{margin:"12px 0 0",maxHeight:200,overflow:"auto",padding:12,borderRadius:"var(--radius-md)",background:"var(--surface-sunken)",border:"1px solid var(--border-subtle)",font:"400 12px/1.5 var(--font-mono)",color:"var(--fg-2)",whiteSpace:"pre-wrap"}}>{c.preview.text}</pre>
+  </ConfirmDialog>;
 }

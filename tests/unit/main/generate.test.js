@@ -1,161 +1,192 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { createGenerator, GROQ_MODEL, MODEL_IDS } from "../../../src/main/generate.js";
-
-const noSleep = async () => {};
 import { DEFAULT_TEMPLATE, SAMPLE_NOTES } from "../../../src/shared/report.js";
 
-const payload = { notes: SAMPLE_NOTES, template: DEFAULT_TEMPLATE, profile: { name: "Mark", role: "CDP Trainee" }, date: "2026-10-08", model: "flash" };
-const geminiReply = obj => ({ ok: true, status: 200, statusText: "OK", text: async () => JSON.stringify({ candidates: [{ content: { parts: [{ text: typeof obj === "string" ? obj : JSON.stringify(obj) }] } }] }) });
-
-describe("generate", () => {
-  it("uses local rules when no key is saved (and never calls fetch)", async () => {
-    let called = false;
-    const g = createGenerator({ getKey: () => null, fetchImpl: async () => { called = true; } });
-    const blocks = await g.generate(payload);
-    expect(called).toBe(false);
-    expect(blocks[0]).toEqual(expect.objectContaining({ title: "TASK TODAY" }));
-    expect(blocks[0].items[0]).toBe("Worked on Hibernate.");
-  });
-  it("calls Gemini with the key header and renders its JSON through the template", async () => {
-    let seen;
-    const g = createGenerator({
-      getKey: () => "KEY",
-      fetchImpl: async (url, init) => { seen = { url, init }; return geminiReply({ tasks: ["Did A."], topics: ["Studied B."], weekly_plans: ["Do C."], blockers: [] }); }
-    });
-    const blocks = await g.generate(payload);
-    expect(seen.url).toContain(`${MODEL_IDS.flash}:generateContent`);
-    expect(seen.init.headers["x-goog-api-key"]).toBe("KEY");
-    expect(JSON.parse(seen.init.body).contents[0].parts[0].text).toContain("worked on hibernate");
-    expect(blocks.find(b => b.title === "TASK TODAY").items).toEqual(["Did A."]);
-    expect(blocks.some(b => b.title === "BLOCKERS")).toBe(false);
-    expect(blocks[blocks.length - 1]).toEqual({ type: "text", text: "CDP Trainee" });
-  });
-  it("accepts JSON wrapped in a markdown fence", async () => {
-    const g = createGenerator({ getKey: () => "K", fetchImpl: async () => geminiReply('```json\n{"tasks":["X."],"topics":[],"weekly_plans":[],"blockers":[]}\n```') });
-    expect((await g.generate(payload))[0].items).toEqual(["X."]);
-  });
-  it("throws with details on HTTP errors", async () => {
-    const g = createGenerator({ getKey: () => "K", sleep: noSleep, fetchImpl: async () => ({ ok: false, status: 503, statusText: "UNAVAILABLE", text: async () => "service overloaded" }) });
-    await expect(g.generate(payload)).rejects.toThrow(/503 UNAVAILABLE.*service overloaded/);
-  });
-  it("throws on malformed or wrong-shape output", async () => {
-    for (const bad of ["not json", { tasks: "a string" }, { tasks: [], topics: [], weekly_plans: [], blockers: [] }, { tasks: [1, 2] }]) {
-      const g = createGenerator({ getKey: () => "K", fetchImpl: async () => geminiReply(bad) });
-      await expect(g.generate(payload)).rejects.toThrow(/unexpected response/i);
-    }
-  });
-  it("throws on network failure", async () => {
-    const g = createGenerator({ getKey: () => "K", sleep: noSleep, fetchImpl: async () => { throw new Error("ECONNRESET"); } });
-    await expect(g.generate(payload)).rejects.toThrow(/ECONNRESET/);
-  });
-  it("testConnection fails without a key and succeeds with one", async () => {
-    await expect(createGenerator({ getKey: () => null }).testConnection("flash")).rejects.toThrow(/API key/i);
-    const g = createGenerator({ getKey: () => "K", fetchImpl: async () => geminiReply("ok") });
-    await expect(g.testConnection("flash")).resolves.toBe(true);
-  });
-});
-
-const groqPayload = { ...payload, provider: "groq" };
-const groqReply = obj => ({ ok: true, status: 200, statusText: "OK", text: async () => JSON.stringify({ choices: [{ message: { content: typeof obj === "string" ? obj : JSON.stringify(obj) } }] }) });
-const httpErr = (status, statusText, body = "oops") => ({ ok: false, status, statusText, text: async () => body });
+const res = (body, status = 200, statusText = "OK") => ({ ok: status < 400, status, statusText, text: async () => typeof body === "string" ? body : JSON.stringify(body) });
+const asText = c => typeof c === "string" ? c : JSON.stringify(c);
+const chat = c => res({ choices: [{ message: { content: asText(c) } }] });
+const geminiReply = c => res({ candidates: [{ content: { parts: [{ text: asText(c) }] } }] });
 const good = { tasks: ["Did A."], topics: [], weekly_plans: [], blockers: [] };
+const down = () => new TypeError("fetch failed");
 
-describe("generate with Groq", () => {
-  it("calls the chat completions endpoint with a Bearer header and the expected body", async () => {
-    let seen;
-    const keys = [];
-    const g = createGenerator({ getKey: p => { keys.push(p); return p === "groq" ? "GKEY" : null; }, fetchImpl: async (url, init) => { seen = { url, init }; return groqReply(good); } });
-    const blocks = await g.generate(groqPayload);
-    expect(seen.url).toBe("https://api.groq.com/openai/v1/chat/completions");
-    expect(seen.init.method).toBe("POST");
-    expect(seen.init.headers.Authorization).toBe("Bearer GKEY");
-    const body = JSON.parse(seen.init.body);
-    expect(body.model).toBe(GROQ_MODEL);
-    expect(GROQ_MODEL).toBe("openai/gpt-oss-120b");
-    expect(body.temperature).toBe(0.2);
-    expect(body.response_format).toEqual({ type: "json_object" });
-    expect(body.messages).toHaveLength(1);
-    expect(body.messages[0].role).toBe("user");
-    expect(body.messages[0].content).toContain("worked on hibernate");
-    expect(blocks.find(b => b.title === "TASK TODAY").items).toEqual(["Did A."]);
-    expect(keys).toContain("groq");
+const aiSettings = (over = {}) => ({
+  local: { baseUrl: "http://localhost:11434/v1", model: "qwen2.5:3b-instruct" },
+  fallback: { provider: "groq", auto: false }, geminiModel: "flash", privacyTerms: "", ...over
+});
+const NOTES = { ...SAMPLE_NOTES, work: SAMPLE_NOTES.work + "\nemailed boss@corp.example about it\nasked Cruz for review" };
+const payload = (over = {}) => ({ notes: NOTES, template: DEFAULT_TEMPLATE, profile: { name: "Mark Justine Dela Cruz", role: "CDP Trainee" }, date: "2026-10-08", dateFormat: "long", ai: aiSettings(), ...over });
+
+let calls, entries;
+beforeEach(() => { calls = []; entries = []; });
+const audit = { record: e => entries.push(e) };
+const route = ({ local = () => chat(good), groq = () => chat(good), gemini = () => geminiReply(good) } = {}) => async (url, init) => {
+  calls.push({ url, init });
+  const h = url.includes("localhost") ? local : url.includes("groq.com") ? groq : url.includes("googleapis") ? gemini : null;
+  if (!h) throw new Error("unexpected url " + url);
+  const x = h(url, init);
+  if (x instanceof Error) throw x;
+  return x;
+};
+const gen = (routes, keys = {}, extra = {}) => createGenerator({ getKey: p => keys[p] ?? null, fetchImpl: route(routes), sleep: async () => {}, audit, ...extra });
+const hits = name => calls.filter(c => c.url.includes(name));
+const taskItems = r => r.blocks.find(b => b.title === "TASK TODAY").items;
+
+describe("local first", () => {
+  it("uses the local model, never touches the cloud or asks for a key", async () => {
+    const asked = [];
+    const g = createGenerator({ getKey: p => { asked.push(p); return "KEY"; }, fetchImpl: route(), audit });
+    const r = await g.generate(payload());
+    expect(r).toMatchObject({ status: "ok", source: "local", note: null });
+    expect(taskItems(r)).toEqual(["Did A."]);
+    expect(r.blocks[r.blocks.length - 1]).toEqual({ type: "text", text: "CDP Trainee" });
+    expect(calls.map(c => c.url)).toEqual(["http://localhost:11434/v1/chat/completions"]);
+    expect(asked).toEqual([]);
+    expect(entries).toEqual([]);
   });
-  it("uses local rules when no Groq key is saved, even if a Gemini key exists (never calls fetch)", async () => {
-    let called = false;
-    const g = createGenerator({ getKey: p => (p === "gemini" ? "GEMKEY" : null), fetchImpl: async () => { called = true; } });
-    const blocks = await g.generate(groqPayload);
-    expect(called).toBe(false);
-    expect(blocks[0].items[0]).toBe("Worked on Hibernate.");
+  it("sends the raw notes to the local model", async () => {
+    await gen().generate(payload());
+    expect(JSON.parse(calls[0].init.body).messages[0].content).toContain("boss@corp.example");
   });
-  it("defaults to Gemini when no provider is given", async () => {
-    let url;
-    const g = createGenerator({ getKey: p => (p === "gemini" ? "K" : null), fetchImpl: async u => { url = u; return geminiReply(good); } });
-    await g.generate(payload);
-    expect(url).toContain("generativelanguage.googleapis.com");
+  it("uses the built-in rules, with the reason, when local fails and no cloud fallback is set up", async () => {
+    const r = await gen({ local: down }).generate(payload());
+    expect(r.source).toBe("template");
+    expect(r.note).toMatch(/Could not reach the local AI server/);
+    expect(r.note).toMatch(/No cloud fallback/);
+    expect(r.blocks[0].items[0]).toBe("Worked on Hibernate.");
+    expect(hits("groq.com")).toHaveLength(0);
   });
-  it("throws the same error shapes for HTTP errors and malformed output", async () => {
-    const e = createGenerator({ getKey: () => "K", sleep: noSleep, fetchImpl: async () => httpErr(401, "Unauthorized", "bad key") });
-    await expect(e.generate(groqPayload)).rejects.toThrow("401 Unauthorized: bad key");
-    for (const bad of ["not json", { tasks: "a string" }, { tasks: [], topics: [], weekly_plans: [], blockers: [] }, { tasks: [1] }]) {
-      const g = createGenerator({ getKey: () => "K", fetchImpl: async () => groqReply(bad) });
-      await expect(g.generate(groqPayload)).rejects.toThrow(/unexpected response/i);
-    }
-    const noChoices = createGenerator({ getKey: () => "K", fetchImpl: async () => ({ ok: true, status: 200, statusText: "OK", text: async () => "{}" }) });
-    await expect(noChoices.generate(groqPayload)).rejects.toThrow(/unexpected response/i);
-  });
-  it("testConnection works per provider and needs that provider's key", async () => {
-    const getKey = p => (p === "groq" ? "K" : null);
-    let url;
-    const g = createGenerator({ getKey, fetchImpl: async u => { url = u; return groqReply("ok"); } });
-    await expect(g.testConnection("flash", "groq")).resolves.toBe(true);
-    expect(url).toContain("api.groq.com");
-    await expect(g.testConnection("flash", "gemini")).rejects.toThrow(/API key/i);
+  it("treats provider none as no fallback even when a key is saved", async () => {
+    const r = await gen({ local: down }, { groq: "KEY" }).generate(payload({ ai: aiSettings({ fallback: { provider: "none", auto: true } }) }));
+    expect(r.source).toBe("template");
+    expect(hits("groq.com")).toHaveLength(0);
   });
 });
 
-describe("retries", () => {
-  const run = async provider => {
-    const waits = [];
-    const replies = [httpErr(503, "UNAVAILABLE"), httpErr(429, "Too Many"), provider === "groq" ? groqReply(good) : geminiReply(good)];
-    let n = 0;
-    const g = createGenerator({ getKey: () => "K", sleep: async ms => { waits.push(ms); }, fetchImpl: async () => replies[n++] });
-    const blocks = await g.generate({ ...payload, provider });
-    return { n, waits, blocks };
-  };
-  for (const provider of ["gemini", "groq"]) {
-    it(`${provider}: retries 503 then 429 with 1000/3000 ms waits, then succeeds`, async () => {
-      const r = await run(provider);
-      expect(r.n).toBe(3);
-      expect(r.waits).toEqual([1000, 3000]);
-      expect(r.blocks.find(b => b.title === "TASK TODAY").items).toEqual(["Did A."]);
-    });
-  }
-  it("retries 500 and network failures", async () => {
-    const seq = [httpErr(500, "ISE"), new Error("ECONNRESET"), geminiReply(good)];
-    let n = 0;
-    const g = createGenerator({ getKey: () => "K", sleep: noSleep, fetchImpl: async () => { const x = seq[n++]; if (x instanceof Error) throw x; return x; } });
-    await g.generate(payload);
-    expect(n).toBe(3);
+describe("asking before the cloud", () => {
+  it("returns needs-consent with a sanitised preview and sends nothing", async () => {
+    const r = await gen({ local: down }, { groq: "KEY" }).generate(payload());
+    expect(r.status).toBe("needs-consent");
+    expect(r.provider).toBe("groq");
+    expect(r.failure.code).toBe("UNREACHABLE");
+    expect(r.preview.text).toContain("[EMAIL_1]");
+    expect(r.preview.text).not.toContain("boss@corp.example");
+    expect(r.preview.text).not.toContain("Cruz");
+    expect(r.preview.chars).toBe(r.preview.text.length);
+    expect(hits("groq.com")).toHaveLength(0);
+    expect(entries).toEqual([]);
   });
-  it("rethrows the LAST error with details after 3 attempts", async () => {
-    const seq = [httpErr(503, "UNAVAILABLE", "first"), httpErr(500, "ISE", "second"), httpErr(503, "UNAVAILABLE", "third")];
-    let n = 0;
-    const waits = [];
-    const g = createGenerator({ getKey: () => "K", sleep: async ms => { waits.push(ms); }, fetchImpl: async () => seq[n++] });
-    await expect(g.generate(groqPayload)).rejects.toThrow("503 UNAVAILABLE: third");
-    expect(n).toBe(3);
+  it("also asks after two unusable local replies", async () => {
+    const r = await gen({ local: () => chat("not json") }, { groq: "KEY" }).generate(payload());
+    expect(r).toMatchObject({ status: "needs-consent", failure: { code: "BAD_REPLY" } });
+  });
+  it("never asks about notes that cannot be sent", async () => {
+    const notes = { ...NOTES, work: "tried password: hunter2" };
+    const r = await gen({ local: down }, { groq: "KEY" }).generate(payload({ notes }));
+    expect(r.status).toBe("ok");
+    expect(r.source).toBe("template");
+    expect(r.note).toMatch(/will not be sent/);
+    expect(hits("groq.com")).toHaveLength(0);
+    expect(entries).toEqual([]);
+  });
+});
+
+describe("sending to the cloud", () => {
+  it("mode cloud skips local, sends sanitised notes, restores them, and logs the send without content", async () => {
+    const groq = () => chat({ tasks: ["Emailed [EMAIL_1] about the issue."], topics: [], weekly_plans: [], blockers: [] });
+    const r = await gen({ groq }, { groq: "GKEY" }).generate(payload({ mode: "cloud" }));
+    expect(r).toMatchObject({ status: "ok", source: "groq", note: null });
+    expect(taskItems(r)).toEqual(["Emailed boss@corp.example about the issue."]);
+    expect(hits("localhost")).toHaveLength(0);
+    const sent = hits("groq.com")[0];
+    expect(sent.url).toBe("https://api.groq.com/openai/v1/chat/completions");
+    expect(sent.init.headers.Authorization).toBe("Bearer GKEY");
+    const body = JSON.parse(sent.init.body);
+    expect(body.model).toBe(GROQ_MODEL);
+    expect(body.response_format).toEqual({ type: "json_object" });
+    expect(body.messages[0].content).toContain("[EMAIL_1]");
+    expect(body.messages[0].content).not.toContain("boss@corp.example");
+    expect(body.messages[0].content).not.toContain("Cruz");
+    expect(entries).toEqual([{ provider: "groq", reason: "user-requested", chars: expect.any(Number) }]);
+    expect(entries[0].chars).toBeGreaterThan(0);
+  });
+  it("hides the extra words from Settings too", async () => {
+    await gen({}, { groq: "K" }).generate(payload({ mode: "cloud", ai: aiSettings({ privacyTerms: "hibernate, Acme" }) }));
+    const content = JSON.parse(hits("groq.com")[0].init.body).messages[0].content;
+    expect(content.split("Notes:\n")[1]).not.toMatch(/hibernate/i);
+  });
+  it("restores a placeholder the model re-cased and leaves one it invented", async () => {
+    const groq = () => chat({ tasks: ["Emailed [email_1] and [EMAIL_9]."], topics: [], weekly_plans: [], blockers: [] });
+    const r = await gen({ groq }, { groq: "K" }).generate(payload({ mode: "cloud" }));
+    expect(taskItems(r)).toEqual(["Emailed boss@corp.example and [EMAIL_9]."]);
+  });
+  it("copes when the model drops every placeholder", async () => {
+    const r = await gen({}, { groq: "K" }).generate(payload({ mode: "cloud" }));
+    expect(taskItems(r)).toEqual(["Did A."]);
+  });
+  it("sends automatically when the user opted in, and logs why", async () => {
+    const r = await gen({ local: down }, { groq: "K" }).generate(payload({ ai: aiSettings({ fallback: { provider: "groq", auto: true } }) }));
+    expect(r.source).toBe("groq");
+    expect(entries[0]).toMatchObject({ provider: "groq", reason: "UNREACHABLE" });
+  });
+  it("uses Gemini when it is the chosen fallback", async () => {
+    const r = await gen({}, { gemini: "GEMKEY" }).generate(payload({ mode: "cloud", ai: aiSettings({ fallback: { provider: "gemini", auto: false } }) }));
+    expect(r.source).toBe("gemini");
+    const sent = hits("googleapis")[0];
+    expect(sent.url).toContain(`${MODEL_IDS.flash}:generateContent`);
+    expect(sent.init.headers["x-goog-api-key"]).toBe("GEMKEY");
+    expect(JSON.parse(sent.init.body).contents[0].parts[0].text).not.toContain("boss@corp.example");
+  });
+  it("falls back to the built-in rules with a note when the cloud call fails", async () => {
+    const r = await gen({ groq: () => res("bad key", 401, "Unauthorized") }, { groq: "K" }).generate(payload({ mode: "cloud" }));
+    expect(r.source).toBe("template");
+    expect(r.note).toMatch(/Groq failed: 401 Unauthorized: bad key/);
+  });
+  it("falls back when the cloud reply is unusable", async () => {
+    const r = await gen({ groq: () => chat("not json") }, { groq: "K" }).generate(payload({ mode: "cloud" }));
+    expect(r.source).toBe("template");
+    expect(r.note).toMatch(/Groq failed: Groq returned an unexpected response/);
+  });
+  it("retries transient cloud errors with 1000 then 3000 ms waits", async () => {
+    const replies = [res("x", 503, "UNAVAILABLE"), res("x", 429, "Too Many"), chat(good)];
+    let n = 0; const waits = [];
+    const g = createGenerator({ getKey: () => "K", fetchImpl: route({ groq: () => replies[n++] }), sleep: async ms => { waits.push(ms); }, audit });
+    const r = await g.generate(payload({ mode: "cloud" }));
+    expect(r.source).toBe("groq");
     expect(waits).toEqual([1000, 3000]);
+    expect(n).toBe(3);
   });
-  it("does not retry other 4xx errors", async () => {
+  it("does not retry other cloud errors", async () => {
     let n = 0;
-    const g = createGenerator({ getKey: () => "K", sleep: async () => { throw new Error("should not sleep"); }, fetchImpl: async () => { n++; return httpErr(400, "Bad Request", "nope"); } });
-    await expect(g.generate(payload)).rejects.toThrow("400 Bad Request: nope");
+    const r = await gen({ groq: () => { n++; return res("nope", 400, "Bad Request"); } }, { groq: "K" }).generate(payload({ mode: "cloud" }));
     expect(n).toBe(1);
+    expect(r.source).toBe("template");
   });
-  it("does not retry malformed output", async () => {
-    let n = 0;
-    const g = createGenerator({ getKey: () => "K", sleep: noSleep, fetchImpl: async () => { n++; return groqReply("not json"); } });
-    await expect(g.generate(groqPayload)).rejects.toThrow(/unexpected response/i);
-    expect(n).toBe(1);
+  it("mode cloud without a saved key uses the built-in rules", async () => {
+    const r = await gen({}, {}).generate(payload({ mode: "cloud" }));
+    expect(r.source).toBe("template");
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("declining", () => {
+  it("mode template makes no network calls", async () => {
+    const r = await gen({}, { groq: "K" }).generate(payload({ mode: "template" }));
+    expect(r).toMatchObject({ status: "ok", source: "template" });
+    expect(r.note).toMatch(/chose not to send/);
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("connection checks", () => {
+  it("testConnection needs that provider's key and then succeeds", async () => {
+    await expect(gen({}, {}).testConnection("groq")).rejects.toThrow(/API key/i);
+    await expect(gen({}, { groq: "K" }).testConnection("groq")).resolves.toBe(true);
+    await expect(gen({}, { gemini: "K" }).testConnection("gemini", "pro")).resolves.toBe(true);
+    expect(hits("googleapis")[0].url).toContain(MODEL_IDS.pro);
+    await expect(gen({}, { groq: "K" }).testConnection("evil")).rejects.toThrow(/provider/i);
+  });
+  it("localStatus reports on the given local settings", async () => {
+    const g = gen({ local: () => res({ data: [{ id: "qwen2.5:3b-instruct" }] }) });
+    expect(await g.localStatus(aiSettings().local)).toEqual({ state: "ready" });
   });
 });

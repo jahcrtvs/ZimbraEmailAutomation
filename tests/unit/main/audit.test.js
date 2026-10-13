@@ -16,9 +16,9 @@ describe("audit", () => {
     expect(JSON.stringify(store.read("audit"))).not.toContain("SECRET");
   });
   it("keeps only the most recent entries", () => {
-    const audit = createAudit(store);
+    let list = [];
+    const audit = createAudit({ update: (_name, fn) => { list = fn(list); return list; } });
     for (let i = 0; i < AUDIT_LIMIT + 5; i++) audit.record({ provider: "groq", reason: "r" + i, chars: i });
-    const list = store.read("audit");
     expect(list).toHaveLength(AUDIT_LIMIT);
     expect(list[list.length - 1].reason).toBe("r" + (AUDIT_LIMIT + 4));
     expect(list[0].reason).toBe("r5");

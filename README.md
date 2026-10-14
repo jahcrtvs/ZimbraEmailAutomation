@@ -127,7 +127,7 @@ You can view, edit or cancel scheduled digests on the **Scheduled** page.
 
 ## How AI generation works
 
-- The local model gets your notes with instructions to write one formal sentence per item, fix the spelling of technical names, and never invent facts, numbers or results. If its answer is not usable it is asked once more.
+- The local model gets your notes with a short set of rules and a few examples of how you usually write (taken from reports you have already sent, topped up with built-in examples). It writes the note and then one formal sentence for it, for every item. A sentence that adds a number or name your note did not mention, or that is about a different item, is replaced by the built-in rule for that item, and the report says how many were replaced. Sentences appear on screen as they are written. A typical report takes 30 to 45 seconds on a laptop without a graphics card; see `docs/local-ai-benchmark.md`. This needs a recent Ollama (structured output); if the app says the server rejected the request, update Ollama.
 - If the local model fails, you see why (not running, model missing, too slow, unusable answer). Then, depending on your Cloud fallback settings, the app asks before sending sanitised notes to the cloud, sends them automatically, or builds the digest with its built-in text rules. Your notes are never lost.
 - Cloud calls retry rate-limit and server errors up to 3 times. If the cloud also fails, the built-in text rules are used.
 - Always read the report before sending. A small model may add general context that a keyword implies, and that context can be wrong.

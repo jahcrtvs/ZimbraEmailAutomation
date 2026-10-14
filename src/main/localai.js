@@ -41,11 +41,11 @@ async function readStream(res, onSentence) {
   return text;
 }
 
-async function attempt(fetchImpl, local, { system, text, counts, onSentence }) {
+async function attempt(fetchImpl, local, { system, shots = [], text, counts, onSentence }) {
   const total = counts ? SECTION_KEYS.reduce((n, k) => n + counts[k], 0) : 0;
   const body = {
     model: local.model,
-    messages: [...(system ? [{ role: "system", content: system }] : []), { role: "user", content: text }],
+    messages: [...(system ? [{ role: "system", content: system }] : []), ...shots, { role: "user", content: text }],
     temperature: 0.2,
     max_tokens: counts ? 80 + 45 * total : 1024,
     keep_alive: KEEP_ALIVE,
@@ -81,10 +81,10 @@ async function attempt(fetchImpl, local, { system, text, counts, onSentence }) {
 
 const hasSentences = r => SECTION_KEYS.some(k => r[k].length);
 
-export async function runLocal({ fetchImpl = fetch, local, text, system, counts, onSentence }) {
+export async function runLocal({ fetchImpl = fetch, local, text, system, shots, counts, onSentence }) {
   for (let i = 0; i < 2; i++) {
     let reply;
-    try { reply = await attempt(fetchImpl, local, { system, text, counts, onSentence: i === 0 ? onSentence : undefined }); }
+    try { reply = await attempt(fetchImpl, local, { system, shots, text, counts, onSentence: i === 0 ? onSentence : undefined }); }
     catch (e) {
       if (e.partial && hasSentences(e.partial)) return { ...e.partial, partial: true };
       throw e;

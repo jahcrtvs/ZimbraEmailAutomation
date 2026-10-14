@@ -93,6 +93,12 @@ describe("runLocal request shape", () => {
     await runLocal({ fetchImpl: f, local, system: "RULES", text: "NOTES" });
     expect(JSON.parse(f.calls[0].init.body).messages).toEqual([{ role: "system", content: "RULES" }, { role: "user", content: "NOTES" }]);
   });
+  it("puts example turns between the instructions and the notes", async () => {
+    const f = seq(chat(good));
+    const shots = [{ role: "user", content: "EX NOTES" }, { role: "assistant", content: "EX REPLY" }];
+    await runLocal({ fetchImpl: f, local, system: "RULES", shots, text: "NOTES" });
+    expect(JSON.parse(f.calls[0].init.body).messages).toEqual([{ role: "system", content: "RULES" }, ...shots, { role: "user", content: "NOTES" }]);
+  });
   it("tells the user to update Ollama when the server rejects the request", async () => {
     const f = seq(res("bad format", 400, "Bad Request"));
     await expect(runLocal({ fetchImpl: f, local, text: "t" })).rejects.toMatchObject({ code: "SERVER", message: expect.stringContaining("Update Ollama") });

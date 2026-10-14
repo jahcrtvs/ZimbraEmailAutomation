@@ -59,7 +59,7 @@ describe("local first", () => {
   });
   it("sends the raw notes to the local model", async () => {
     await gen().generate(payload());
-    expect(JSON.parse(calls[0].init.body).messages[1].content).toContain("boss@corp.example");
+    expect(JSON.parse(calls[0].init.body).messages.at(-1).content).toContain("boss@corp.example");
   });
   it("uses the built-in rules, with the reason, when local fails and no cloud fallback is set up", async () => {
     const r = await gen({ local: down }).generate(payload());
@@ -80,12 +80,18 @@ describe("local quality", () => {
   const history = [{ status: "sent", notes: { work: "fixed login", topics: "", progress: "", blockers: "", tomorrow: "" }, blocks: [{ type: "section", title: "TASK TODAY", items: ["Fixed the login page."] }] }];
   const local = reply => () => chat(reply);
 
-  it("puts examples from sent history in the system message and asks for one sentence per item", async () => {
+  it("shows examples from sent history as an earlier exchange and asks for one sentence per item", async () => {
     await gen({ local: local(aligned(two)) }).generate(payload({ notes: two, history }));
     const body = JSON.parse(calls[0].init.body);
-    expect(body.messages[0].role).toBe("system");
-    expect(body.messages[0].content).toContain("tasks: fixed login => Fixed the login page.");
-    expect(body.messages[1].content.startsWith("Notes:\n")).toBe(true);
+    const [rules, exUser, exReply, last] = body.messages;
+    expect(body.messages).toHaveLength(4);
+    expect(rules.role).toBe("system");
+    expect(exUser).toMatchObject({ role: "user" });
+    expect(exUser.content).toContain("Today's Work:\nfixed login");
+    expect(exReply.role).toBe("assistant");
+    expect(JSON.parse(exReply.content).tasks).toContain("Fixed the login page.");
+    expect(last.role).toBe("user");
+    expect(last.content).toContain("Today's Work:\nfixed login\nwrote tests");
     expect(body.response_format.json_schema.schema.properties.tasks).toMatchObject({ minItems: 2, maxItems: 2 });
     expect(body.response_format.json_schema.schema.properties.topics).toMatchObject({ minItems: 0, maxItems: 0 });
   });

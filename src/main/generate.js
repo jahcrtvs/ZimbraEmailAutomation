@@ -2,7 +2,7 @@ import { buildVars, render, noteItems } from "../shared/report.js";
 import { fromISODate } from "../shared/time.js";
 import { sanitizeNotes, restore } from "../shared/sanitize.js";
 import { PROVIDER_NAMES } from "../shared/ai.js";
-import { PROMPT, notesText, parseReply, localPrompt, SECTION_KEYS } from "./reply.js";
+import { PROMPT, LOCAL_PROMPT, notesText, parseReply, exampleExchange, SECTION_KEYS } from "./reply.js";
 import { runLocal, localStatus, warmUp } from "./localai.js";
 import { applyChecks } from "./check.js";
 import { pickExamples } from "./examples.js";
@@ -89,7 +89,8 @@ export function createGenerator({ getKey, fetchImpl = fetch, sleep = realSleep, 
         const counts = Object.fromEntries(SECTION_KEYS.map(k => [k, items[k].length]));
         const { partial, ...raw } = await runLocal({
           fetchImpl, local: ai.local, counts,
-          system: localPrompt(pickExamples({ history, items })),
+          system: LOCAL_PROMPT,
+          shots: exampleExchange(pickExamples({ history, items })),
           text: "Notes:\n" + notesText(notes),
           onSentence: onProgress && ((section, sentence) => onProgress({ section, sentence }))
         });

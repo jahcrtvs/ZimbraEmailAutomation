@@ -28,15 +28,24 @@ Reply only with JSON: {"tasks":[],"topics":[],"weekly_plans":[],"blockers":[]}
 tasks = Today's Work, then Still Working On. topics = Topics / Lessons. weekly_plans = Tomorrow. blockers = Blockers.
 `;
 
-// Examples show tone and structure only; the model must not copy their facts.
-export const localPrompt = examples => examples.length
-  ? LOCAL_PROMPT + "\nExamples of the style to copy (section: note => sentence):\n" + examples.map(e => `${e.section}: ${e.item} => ${e.sentence}`).join("\n") + "\n"
-  : LOCAL_PROMPT;
-
 const labels = { work: "Today's Work", topics: "Topics / Lessons", progress: "Still Working On", blockers: "Blockers", tomorrow: "Tomorrow" };
 export const notesText = n => Object.keys(labels).map(k => `${labels[k]}:\n${(n[k] || "").trim() || "(none)"}`).join("\n\n");
 
 export const SECTION_KEYS = ["tasks", "topics", "weekly_plans", "blockers"];
+
+// The examples as one earlier request and the answer the user wanted. A small model copies
+// the length and structure of a previous answer far more reliably than it follows a rule.
+const FIELD_OF = { tasks: "work", topics: "topics", weekly_plans: "tomorrow", blockers: "blockers" };
+export function exampleExchange(examples) {
+  if (!examples.length) return [];
+  const notes = {}, reply = {};
+  for (const k of SECTION_KEYS) {
+    const of = examples.filter(e => e.section === k);
+    notes[FIELD_OF[k]] = of.map(e => e.item).join("\n");
+    reply[k] = of.map(e => e.sentence);
+  }
+  return [{ role: "user", content: "Notes:\n" + notesText(notes) }, { role: "assistant", content: JSON.stringify(reply) }];
+}
 
 export function parseReply(text, name = "Gemini") {
   const cleaned = String(text).trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");

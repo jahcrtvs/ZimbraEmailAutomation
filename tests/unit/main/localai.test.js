@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { runLocal, localStatus } from "../../../src/main/localai.js";
+import { runLocal, localStatus, warmUp, KEEP_ALIVE } from "../../../src/main/localai.js";
 
 const local = { baseUrl: "http://localhost:11434/v1/", model: "qwen2.5:3b-instruct" };
 const res = (body, status = 200, statusText = "OK") => ({ ok: status < 400, status, statusText, text: async () => typeof body === "string" ? body : JSON.stringify(body) });
@@ -22,7 +22,7 @@ describe("runLocal", () => {
     const body = JSON.parse(init.body);
     expect(body.model).toBe("qwen2.5:3b-instruct");
     expect(body.temperature).toBe(0.2);
-    expect(body.response_format).toEqual({ type: "json_object" });
+    expect(body.response_format.type).toBe("json_schema");
     expect(body.messages).toEqual([{ role: "user", content: "PROMPT" }]);
   });
   it("accepts JSON in a code fence or surrounded by prose", async () => {
@@ -60,6 +60,88 @@ describe("runLocal", () => {
     const f = seq(res("boom", 500, "Internal Server Error"));
     await expect(runLocal({ fetchImpl: f, local, text: "t" })).rejects.toMatchObject({ code: "SERVER", message: expect.stringContaining("500") });
     expect(f.calls).toHaveLength(1);
+  });
+});
+
+const enc = new TextEncoder();
+// A streaming reply: strings become SSE deltas, an Error makes the connection fail at that point.
+const sse = (...parts) => {
+  const queue = parts.map(p => p instanceof Error ? p : enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: p } }] })}\n\n`));
+  let i = 0;
+  return { ok: true, status: 200, statusText: "OK", body: { getReader: () => ({ read: async () => {
+    if (i >= queue.length) return { done: true };
+    const x = queue[i++]; if (x instanceof Error) throw x; return { done: false, value: x };
+  } }) } };
+};
+const counts = { tasks: 2, topics: 0, weekly_plans: 0, blockers: 0 };
+
+describe("runLocal request shape", () => {
+  it("asks for a schema-valid reply with exactly one sentence per item, a token cap and keep_alive", async () => {
+    const f = seq(chat({ tasks: ["A.", "B."], topics: [], weekly_plans: [], blockers: [] }));
+    await runLocal({ fetchImpl: f, local, text: "t", counts });
+    const body = JSON.parse(f.calls[0].init.body);
+    expect(body.response_format.type).toBe("json_schema");
+    const props = body.response_format.json_schema.schema.properties;
+    expect(props.tasks).toEqual({ type: "array", items: { type: "string" }, minItems: 2, maxItems: 2 });
+    expect(props.topics).toMatchObject({ minItems: 0, maxItems: 0 });
+    expect(body.max_tokens).toBe(80 + 45 * 2);
+    expect(body.keep_alive).toBe(KEEP_ALIVE);
+    expect(body.stream).toBeUndefined();
+  });
+  it("sends the instructions as a system message and the notes as the user message", async () => {
+    const f = seq(chat(good));
+    await runLocal({ fetchImpl: f, local, system: "RULES", text: "NOTES" });
+    expect(JSON.parse(f.calls[0].init.body).messages).toEqual([{ role: "system", content: "RULES" }, { role: "user", content: "NOTES" }]);
+  });
+  it("tells the user to update Ollama when the server rejects the request", async () => {
+    const f = seq(res("bad format", 400, "Bad Request"));
+    await expect(runLocal({ fetchImpl: f, local, text: "t" })).rejects.toMatchObject({ code: "SERVER", message: expect.stringContaining("Update Ollama") });
+    expect(f.calls).toHaveLength(1);
+  });
+});
+
+describe("runLocal streaming", () => {
+  it("reports each sentence as it is written and returns the full reply", async () => {
+    const seen = [];
+    const f = seq(sse('{"tasks":["Did', ' A."],"topics":[],', '"weekly_plans":[],"blockers":[]}'));
+    const out = await runLocal({ fetchImpl: f, local, text: "t", onSentence: (...a) => seen.push(a) });
+    expect(out).toEqual({ tasks: ["Did A."], topics: [], weekly_plans: [], blockers: [] });
+    expect(seen).toEqual([["tasks", "Did A.", 0]]);
+    expect(JSON.parse(f.calls[0].init.body).stream).toBe(true);
+  });
+  it("keeps the sentences received when the connection drops, and marks the result partial", async () => {
+    const f = seq(sse('{"tasks":["Did A.","Un', new Error("socket closed")));
+    const out = await runLocal({ fetchImpl: f, local, text: "t", onSentence: () => {} });
+    expect(out).toEqual({ tasks: ["Did A."], topics: [], weekly_plans: [], blockers: [], partial: true });
+    expect(f.calls).toHaveLength(1);
+  });
+  it("fails with STREAM when the connection drops before any sentence", async () => {
+    const f = seq(sse('{"tasks":["Un', new Error("socket closed")));
+    await expect(runLocal({ fetchImpl: f, local, text: "t", onSentence: () => {} })).rejects.toMatchObject({ code: "STREAM" });
+  });
+  it("asks again without streaming when the streamed reply is not usable", async () => {
+    const f = seq(sse("nope"), chat(good));
+    const out = await runLocal({ fetchImpl: f, local, text: "t", onSentence: () => {} });
+    expect(out.tasks).toEqual(["Did A."]);
+    expect(JSON.parse(f.calls[1].init.body).stream).toBeUndefined();
+  });
+});
+
+describe("warmUp", () => {
+  it("loads the model with a one-token request that keeps it loaded", async () => {
+    const f = seq(chat("ok"));
+    await warmUp({ fetchImpl: f, local });
+    const body = JSON.parse(f.calls[0].init.body);
+    expect(body).toMatchObject({ model: "qwen2.5:3b-instruct", max_tokens: 1, keep_alive: KEEP_ALIVE });
+  });
+  it("does nothing for hosted models or servers that are not on this computer", async () => {
+    const f = seq(chat("ok"));
+    await warmUp({ fetchImpl: f, local: { ...local, model: "gpt-oss:120b-cloud" } });
+    await warmUp({ fetchImpl: f, local: { ...local, baseUrl: "http://192.168.1.5:11434/v1" } });
+    expect(f.calls).toHaveLength(0);
+  });
+  it("never throws", async () => {
+    await expect(warmUp({ fetchImpl: seq(new TypeError("fetch failed")), local })).resolves.toBeUndefined();
   });
 });
 

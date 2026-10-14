@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createGenerator, GROQ_MODEL, MODEL_IDS } from "../../../src/main/generate.js";
-import { DEFAULT_TEMPLATE, SAMPLE_NOTES } from "../../../src/shared/report.js";
+import { DEFAULT_TEMPLATE, SAMPLE_NOTES, noteItems } from "../../../src/shared/report.js";
 
 const res = (body, status = 200, statusText = "OK") => ({ ok: status < 400, status, statusText, text: async () => typeof body === "string" ? body : JSON.stringify(body) });
 const asText = c => typeof c === "string" ? c : JSON.stringify(c);
@@ -14,12 +14,26 @@ const aiSettings = (over = {}) => ({
   fallback: { provider: "groq", auto: false }, geminiModel: "flash", privacyTerms: "", ...over
 });
 const NOTES = { ...SAMPLE_NOTES, work: SAMPLE_NOTES.work + "\nemailed boss@corp.example about it\nasked Cruz for review" };
+const aligned = (notes, over = {}) => {
+  const it = noteItems(notes);
+  return { tasks: it.tasks.map(x => `Worked on ${x}.`), topics: it.topics.map(x => `Studied ${x}.`), weekly_plans: it.weekly_plans.map(x => `Continue ${x}.`), blockers: it.blockers.map(x => `Blocked by ${x}.`), ...over };
+};
+const two = { work: "fixed login\nwrote tests", topics: "", progress: "", blockers: "", tomorrow: "" };
+const enc = new TextEncoder();
+const sse = (...parts) => {
+  const queue = parts.map(p => p instanceof Error ? p : enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: p } }] })}\n\n`));
+  let i = 0;
+  return { ok: true, status: 200, statusText: "OK", body: { getReader: () => ({ read: async () => {
+    if (i >= queue.length) return { done: true };
+    const x = queue[i++]; if (x instanceof Error) throw x; return { done: false, value: x };
+  } }) } };
+};
 const payload = (over = {}) => ({ notes: NOTES, template: DEFAULT_TEMPLATE, profile: { name: "Mark Justine Dela Cruz", role: "CDP Trainee" }, date: "2026-10-08", dateFormat: "long", ai: aiSettings(), ...over });
 
 let calls, entries;
 beforeEach(() => { calls = []; entries = []; });
 const audit = { record: e => entries.push(e) };
-const route = ({ local = () => chat(good), groq = () => chat(good), gemini = () => geminiReply(good) } = {}) => async (url, init) => {
+const route = ({ local = () => chat(aligned(NOTES)), groq = () => chat(good), gemini = () => geminiReply(good) } = {}) => async (url, init) => {
   calls.push({ url, init });
   const h = url.includes("localhost") ? local : url.includes("groq.com") ? groq : url.includes("googleapis") ? gemini : null;
   if (!h) throw new Error("unexpected url " + url);
@@ -37,7 +51,7 @@ describe("local first", () => {
     const g = createGenerator({ getKey: p => { asked.push(p); return "KEY"; }, fetchImpl: route(), audit });
     const r = await g.generate(payload());
     expect(r).toMatchObject({ status: "ok", source: "local", note: null });
-    expect(taskItems(r)).toEqual(["Did A."]);
+    expect(taskItems(r)).toEqual(aligned(NOTES).tasks);
     expect(r.blocks[r.blocks.length - 1]).toEqual({ type: "text", text: "CDP Trainee" });
     expect(calls.map(c => c.url)).toEqual(["http://localhost:11434/v1/chat/completions"]);
     expect(asked).toEqual([]);
@@ -45,7 +59,7 @@ describe("local first", () => {
   });
   it("sends the raw notes to the local model", async () => {
     await gen().generate(payload());
-    expect(JSON.parse(calls[0].init.body).messages[0].content).toContain("boss@corp.example");
+    expect(JSON.parse(calls[0].init.body).messages[1].content).toContain("boss@corp.example");
   });
   it("uses the built-in rules, with the reason, when local fails and no cloud fallback is set up", async () => {
     const r = await gen({ local: down }).generate(payload());
@@ -59,6 +73,66 @@ describe("local first", () => {
     const r = await gen({ local: down }, { groq: "KEY" }).generate(payload({ ai: aiSettings({ fallback: { provider: "none", auto: true } }) }));
     expect(r.source).toBe("template");
     expect(hits("groq.com")).toHaveLength(0);
+  });
+});
+
+describe("local quality", () => {
+  const history = [{ status: "sent", notes: { work: "fixed login", topics: "", progress: "", blockers: "", tomorrow: "" }, blocks: [{ type: "section", title: "TASK TODAY", items: ["Fixed the login page."] }] }];
+  const local = reply => () => chat(reply);
+
+  it("puts examples from sent history in the system message and asks for one sentence per item", async () => {
+    await gen({ local: local(aligned(two)) }).generate(payload({ notes: two, history }));
+    const body = JSON.parse(calls[0].init.body);
+    expect(body.messages[0].role).toBe("system");
+    expect(body.messages[0].content).toContain("tasks: fixed login => Fixed the login page.");
+    expect(body.messages[1].content.startsWith("Notes:\n")).toBe(true);
+    expect(body.response_format.json_schema.schema.properties.tasks).toMatchObject({ minItems: 2, maxItems: 2 });
+    expect(body.response_format.json_schema.schema.properties.topics).toMatchObject({ minItems: 0, maxItems: 0 });
+  });
+  it("replaces only a sentence that invents a number, and says so", async () => {
+    const r = await gen({ local: local(aligned(two, { tasks: ["Fixed the login bug within 3 hours.", "Wrote the unit tests."] })) }).generate(payload({ notes: two }));
+    expect(r.source).toBe("local");
+    expect(taskItems(r)).toEqual(["Fixed login.", "Wrote the unit tests."]);
+    expect(r.note).toMatch(/1 of 2 sentences use the built-in rules/);
+  });
+  it("uses the built-in rules and says the AI was not used when every sentence is rejected", async () => {
+    const r = await gen({ local: local(aligned(two, { tasks: ["Fixed login in 3 hours.", "Wrote 5 tests."] })) }).generate(payload({ notes: two }));
+    expect(r.source).toBe("template");
+    expect(r.note).toMatch(/could not be used/);
+    expect(taskItems(r)).toEqual(["Fixed login.", "Wrote tests."]);
+  });
+  it("uses the built-in rules for a section when the model returns the wrong number of sentences", async () => {
+    const r = await gen({ local: local(aligned(two, { tasks: ["Fixed the login page."] })) }).generate(payload({ notes: two }));
+    expect(r.source).toBe("template");
+    expect(taskItems(r)).toEqual(["Fixed login.", "Wrote tests."]);
+  });
+  it("streams sentences to onProgress and keeps what arrived if the connection drops", async () => {
+    const seen = [];
+    const r = await gen({ local: () => sse('{"tasks":["Fixed the login page.","Wro', new Error("socket closed")) }).generate(payload({ notes: two, onProgress: p => seen.push(p) }));
+    expect(seen).toEqual([{ section: "tasks", sentence: "Fixed the login page." }]);
+    expect(r.source).toBe("local");
+    expect(taskItems(r)).toEqual(["Fixed the login page.", "Wrote tests."]);
+    expect(r.note).toMatch(/1 of 2 sentences/);
+  });
+  it("reports progress for a complete streamed reply and sends stream: true", async () => {
+    const seen = [];
+    const full = JSON.stringify(aligned(two));
+    const r = await gen({ local: () => sse(full.slice(0, 20), full.slice(20)) }).generate(payload({ notes: two, onProgress: p => seen.push(p.sentence) }));
+    expect(seen).toEqual(aligned(two).tasks);
+    expect(r.note).toBeNull();
+    expect(JSON.parse(calls[0].init.body).stream).toBe(true);
+  });
+  it("never puts history or examples in a cloud request", async () => {
+    const secret = [{ status: "sent", notes: { work: "fixed login", topics: "", progress: "", blockers: "", tomorrow: "" }, blocks: [{ type: "section", title: "TASK TODAY", items: ["SECRET SENTENCE about Project Orion."] }] }];
+    await gen({}, { groq: "K" }).generate(payload({ mode: "cloud", notes: two, history: secret }));
+    await gen({ local: down }, { groq: "K" }).generate(payload({ notes: two, history: secret, ai: aiSettings({ fallback: { provider: "groq", auto: true } }) }));
+    expect(hits("groq.com")).toHaveLength(2);
+    for (const c of hits("groq.com")) expect(c.init.body).not.toMatch(/SECRET SENTENCE|Orion|=>/);
+  });
+  it("exposes warmUp for the stored local settings", async () => {
+    const g = gen({ local: () => chat("ok") });
+    await g.warmUp(aiSettings().local);
+    expect(hits("localhost")).toHaveLength(1);
   });
 });
 

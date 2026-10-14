@@ -1,9 +1,11 @@
-import { buildVars, render } from "../shared/report.js";
+import { buildVars, render, noteItems } from "../shared/report.js";
 import { fromISODate } from "../shared/time.js";
 import { sanitizeNotes, restore } from "../shared/sanitize.js";
 import { PROVIDER_NAMES } from "../shared/ai.js";
-import { PROMPT, notesText, parseReply } from "./reply.js";
-import { runLocal, localStatus } from "./localai.js";
+import { PROMPT, notesText, parseReply, localPrompt, SECTION_KEYS } from "./reply.js";
+import { runLocal, localStatus, warmUp } from "./localai.js";
+import { applyChecks } from "./check.js";
+import { pickExamples } from "./examples.js";
 
 export const MODEL_IDS = { flash: "gemini-3.7-flash", pro: "gemini-pro-latest" };
 // Unverified against Groq's current model list.
@@ -74,7 +76,7 @@ export function createGenerator({ getKey, fetchImpl = fetch, sleep = realSleep, 
 
   const cloudFor = ai => { const p = ai.fallback?.provider; return CLOUD[p] && getKey(p) ? p : null; };
 
-  async function generate({ notes, template, profile, date, dateFormat, ai, mode = "auto" }) {
+  async function generate({ notes, template, profile, date, dateFormat, ai, mode = "auto", history = [], onProgress }) {
     const vars = buildVars(notes, profile, fromISODate(date), dateFormat);
     const ok = (parsed, source) => ({ status: "ok", source, note: null, blocks: render(template, { ...vars, ...parsed, tomorrow: parsed.weekly_plans }) });
     const plain = note => ({ status: "ok", source: "template", note, blocks: render(template, vars) });
@@ -82,8 +84,20 @@ export function createGenerator({ getKey, fetchImpl = fetch, sleep = realSleep, 
 
     let failure = null;
     if (mode === "auto") {
-      try { return ok(await runLocal({ fetchImpl, local: ai.local, text: PROMPT + notesText(notes) }), "local"); }
-      catch (e) { failure = { code: e.code || "UNKNOWN", message: e.message }; }
+      try {
+        const items = noteItems(notes);
+        const counts = Object.fromEntries(SECTION_KEYS.map(k => [k, items[k].length]));
+        const { partial, ...raw } = await runLocal({
+          fetchImpl, local: ai.local, counts,
+          system: localPrompt(pickExamples({ history, items })),
+          text: "Notes:\n" + notesText(notes),
+          onSentence: onProgress && ((section, sentence) => onProgress({ section, sentence }))
+        });
+        const { parsed, fallbacks, total } = applyChecks({ items, parsed: raw, builtIn: vars, partial: !!partial });
+        if (total && fallbacks === total) return plain("The local AI's sentences could not be used, so the built-in text rules were used.");
+        const note = fallbacks ? `${fallbacks} of ${total} sentences use the built-in rules because the local AI left them out or added details your notes did not mention.` : null;
+        return { ...ok(parsed, "local"), note };
+      } catch (e) { failure = { code: e.code || "UNKNOWN", message: e.message }; }
     }
     const why = failure ? failure.message + " " : "";
     const provider = cloudFor(ai);
@@ -108,6 +122,7 @@ export function createGenerator({ getKey, fetchImpl = fetch, sleep = realSleep, 
   return {
     generate,
     localStatus: local => localStatus({ fetchImpl, local }),
+    warmUp: local => warmUp({ fetchImpl, local }),
     async testConnection(provider, geminiModel = "flash") {
       if (!CLOUD[provider]) throw new Error("Unknown provider.");
       if (!getKey(provider)) throw new Error("No API key saved.");

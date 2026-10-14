@@ -12,7 +12,9 @@ const timedOut = e => e?.name === "TimeoutError" || e?.name === "AbortError";
 
 // With counts, each array must hold exactly one sentence per note item, so sentence N is item N.
 export function replySchema(counts) {
-  const arr = k => counts ? { type: "array", items: { type: "string" }, minItems: counts[k], maxItems: counts[k] } : { type: "array", items: { type: "string" } };
+  // Writing the note before its sentence keeps a small model on the right item.
+  const entry = { type: "object", properties: { note: { type: "string" }, sentence: { type: "string" } }, required: ["note", "sentence"], additionalProperties: false };
+  const arr = k => counts ? { type: "array", items: entry, minItems: counts[k], maxItems: counts[k] } : { type: "array", items: entry };
   return { type: "object", properties: Object.fromEntries(SECTION_KEYS.map(k => [k, arr(k)])), required: SECTION_KEYS, additionalProperties: false };
 }
 
@@ -47,7 +49,7 @@ async function attempt(fetchImpl, local, { system, shots = [], text, counts, onS
     model: local.model,
     messages: [...(system ? [{ role: "system", content: system }] : []), ...shots, { role: "user", content: text }],
     temperature: 0.2,
-    max_tokens: counts ? 80 + 45 * total : 1024,
+    max_tokens: counts ? 80 + 60 * total : 1024,
     keep_alive: KEEP_ALIVE,
     response_format: { type: "json_schema", json_schema: { name: "digest", strict: true, schema: replySchema(counts) } }
   };

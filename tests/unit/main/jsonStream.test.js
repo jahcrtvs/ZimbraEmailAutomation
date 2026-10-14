@@ -26,6 +26,18 @@ describe("createSentenceScanner", () => {
     const { got } = feed('{"extra":["x"],"tasks":["Y."]} }}} "unterminated', 4);
     expect(got).toEqual([["tasks", "Y.", 0]]);
   });
+  it("reads the sentence of {note, sentence} entries and ignores the echoed note", () => {
+    const anchored = '{"tasks":[{"note":"sentence","sentence":"Did A."},{"note":"b","sentence":"Did \\"B\\"."}],"topics":[],"weekly_plans":[{"note":"c","sentence":"Plan."}],"blockers":[]}';
+    for (const size of [1, 4, 1000]) {
+      const { got, result } = feed(anchored, size);
+      expect(got).toEqual([["tasks", "Did A.", 0], ["tasks", 'Did "B".', 1], ["weekly_plans", "Plan.", 0]]);
+      expect(result.tasks).toEqual(["Did A.", 'Did "B".']);
+    }
+  });
+  it("does not report a sentence whose note has been written but whose sentence has not", () => {
+    const { got } = feed('{"tasks":[{"note":"fixed login","sentence":"Fixed the lo', 3);
+    expect(got).toEqual([]);
+  });
   it("works without a callback", () => {
     const s = createSentenceScanner();
     s.push('{"tasks":["Z."]}');

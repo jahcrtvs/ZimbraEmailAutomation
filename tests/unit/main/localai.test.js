@@ -82,9 +82,10 @@ describe("runLocal request shape", () => {
     const body = JSON.parse(f.calls[0].init.body);
     expect(body.response_format.type).toBe("json_schema");
     const props = body.response_format.json_schema.schema.properties;
-    expect(props.tasks).toEqual({ type: "array", items: { type: "string" }, minItems: 2, maxItems: 2 });
+    const entry = { type: "object", properties: { note: { type: "string" }, sentence: { type: "string" } }, required: ["note", "sentence"], additionalProperties: false };
+    expect(props.tasks).toEqual({ type: "array", items: entry, minItems: 2, maxItems: 2 });
     expect(props.topics).toMatchObject({ minItems: 0, maxItems: 0 });
-    expect(body.max_tokens).toBe(80 + 45 * 2);
+    expect(body.max_tokens).toBe(80 + 60 * 2);
     expect(body.keep_alive).toBe(KEEP_ALIVE);
     expect(body.stream).toBeUndefined();
   });

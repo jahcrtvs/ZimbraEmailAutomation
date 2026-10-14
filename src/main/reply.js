@@ -25,6 +25,7 @@ Rules:
 - Fix the spelling of technical names (Hibernate, Spring Boot, HQL, API, SQL, JDBC, ORM, Java).
 - Never add numbers, results, causes, people or tools the note does not mention. No em dashes, no exclamation marks, no words like "successfully" or "comprehensive".
 Reply only with JSON: {"tasks":[],"topics":[],"weekly_plans":[],"blockers":[]}
+Each array entry is {"note": the note line copied exactly, "sentence": the sentence for that note}.
 tasks = Today's Work, then Still Working On. topics = Topics / Lessons. weekly_plans = Tomorrow. blockers = Blockers.
 `;
 
@@ -42,7 +43,7 @@ export function exampleExchange(examples) {
   for (const k of SECTION_KEYS) {
     const of = examples.filter(e => e.section === k);
     notes[FIELD_OF[k]] = of.map(e => e.item).join("\n");
-    reply[k] = of.map(e => e.sentence);
+    reply[k] = of.map(e => ({ note: e.item, sentence: e.sentence }));
   }
   return [{ role: "user", content: "Notes:\n" + notesText(notes) }, { role: "assistant", content: JSON.stringify(reply) }];
 }
@@ -58,7 +59,9 @@ export function parseReply(text, name = "Gemini") {
   }
   const out = {};
   for (const k of SECTION_KEYS) {
-    const v = obj?.[k] ?? [];
+    // An entry may be a plain string or {note, sentence}; the note only anchors the model to its item.
+    const v = (obj?.[k] ?? []);
+    if (Array.isArray(v)) for (let i = 0; i < v.length; i++) if (v[i] && typeof v[i] === "object" && typeof v[i].sentence === "string") v[i] = v[i].sentence;
     if (!Array.isArray(v) || v.some(x => typeof x !== "string")) throw new Error(`${name} returned an unexpected response: "${k}" must be a list of text`);
     out[k] = v.map(x => x.trim()).filter(Boolean);
   }

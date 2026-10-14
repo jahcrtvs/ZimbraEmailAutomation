@@ -89,7 +89,7 @@ describe("local quality", () => {
     expect(exUser).toMatchObject({ role: "user" });
     expect(exUser.content).toContain("Today's Work:\nfixed login");
     expect(exReply.role).toBe("assistant");
-    expect(JSON.parse(exReply.content).tasks).toContain("Fixed the login page.");
+    expect(JSON.parse(exReply.content).tasks).toContainEqual({ note: "fixed login", sentence: "Fixed the login page." });
     expect(last.role).toBe("user");
     expect(last.content).toContain("Today's Work:\nfixed login\nwrote tests");
     expect(body.response_format.json_schema.schema.properties.tasks).toMatchObject({ minItems: 2, maxItems: 2 });

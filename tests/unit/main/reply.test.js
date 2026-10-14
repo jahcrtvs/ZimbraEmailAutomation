@@ -1,5 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { PROMPT, LOCAL_PROMPT, exampleExchange } from "../../../src/main/reply.js";
+import { PROMPT, LOCAL_PROMPT, exampleExchange, parseReply } from "../../../src/main/reply.js";
+
+describe("parseReply with {note, sentence} entries", () => {
+  it("takes the sentence of each entry and still accepts plain strings", () => {
+    const text = JSON.stringify({ tasks: [{ note: "fixed login", sentence: "Fixed the login page." }, "Wrote tests."], topics: [], weekly_plans: [], blockers: [] });
+    expect(parseReply(text, "The local model").tasks).toEqual(["Fixed the login page.", "Wrote tests."]);
+  });
+  it("rejects an entry without a text sentence", () => {
+    const text = JSON.stringify({ tasks: [{ note: "x" }], topics: [], weekly_plans: [], blockers: [] });
+    expect(() => parseReply(text, "The local model")).toThrow(/must be a list of text/);
+  });
+});
 
 describe("local prompt", () => {
   it("is much shorter than the cloud prompt and asks for 12 to 20 words, one sentence per note", () => {
@@ -34,6 +45,9 @@ describe("exampleExchange", () => {
     expect(user.content).toContain("Tomorrow:\nreview lesson");
     expect(user.content).toContain("Blockers:\n(none)");
     expect(assistant.role).toBe("assistant");
-    expect(JSON.parse(assistant.content)).toEqual({ tasks: ["Fixed the login page.", "Wrote the unit tests."], topics: [], weekly_plans: ["Review today's lesson."], blockers: [] });
+    expect(JSON.parse(assistant.content)).toEqual({
+      tasks: [{ note: "fixed login", sentence: "Fixed the login page." }, { note: "wrote tests", sentence: "Wrote the unit tests." }],
+      topics: [], weekly_plans: [{ note: "review lesson", sentence: "Review today's lesson." }], blockers: []
+    });
   });
 });

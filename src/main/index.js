@@ -45,6 +45,8 @@ else {
       onChange: items => send("schedule:changed", items)
     });
     registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, shell, send });
+    // Load the local model now so the first report does not wait for it. Best effort.
+    generator.warmUp(store.read("settings").ai.local);
     app.setLoginItemSettings({ openAtLogin: !!store.read("settings").app.startWithWindows && !process.env.DD_TEST });
 
     win = new BrowserWindow({

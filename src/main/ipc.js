@@ -19,7 +19,8 @@ export function registerIpc({ ipcMain, store, secrets, generator, scheduler, zim
   h("schedule:setStatus", (id, status) => scheduler.setStatus(id, status));
   h("ai:generate", ({ notes, template, profile, date, dateFormat, mode = "auto" }) => {
     if (!MODES.includes(mode)) throw new Error("Unknown mode.");
-    return generator.generate({ notes, template, profile, date, dateFormat, mode, ai: ai() });
+    // History is read here, never taken from the renderer, for the same reason as the AI settings.
+    return generator.generate({ notes, template, profile, date, dateFormat, mode, ai: ai(), history: store.read("history"), onProgress: p => send("ai:progress", p) });
   });
   h("ai:status", () => generator.localStatus(ai().local));
   h("ai:test", p => generator.testConnection(checkProvider(p), ai().geminiModel));

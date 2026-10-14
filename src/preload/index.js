@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld("api", {
     onChanged: on("schedule:changed")
   },
   generate: p => call("ai:generate", p),
+  onGenerateProgress: on("ai:progress"),
   localStatus: () => call("ai:status"),
   testAI: provider => call("ai:test", provider),
   setApiKey: (key, provider) => call("ai:setKey", key, provider),

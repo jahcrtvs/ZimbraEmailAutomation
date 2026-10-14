@@ -89,6 +89,17 @@ describe("ipc", () => {
     expect(seen.mode).toBe("auto");
     expect((await call("ai:generate", { notes: {}, mode: "bogus" })).ok).toBe(false);
   });
+  it("gives the generator the stored history, and forwards sentences as ai:progress events", async () => {
+    let seen;
+    deps.generator.generate = async p => { seen = p; p.onProgress({ section: "tasks", sentence: "Done." }); return { status: "ok" }; };
+    registerIpc(deps);
+    const history = [{ id: "1", status: "sent", notes: {}, blocks: [] }];
+    deps.store.write("history", history);
+    const r = await call("ai:generate", { notes: { work: "x" }, template: "t", profile: {}, date: "2026-10-14", dateFormat: "long", history: [{ evil: true }] });
+    expect(r.ok).toBe(true);
+    expect(seen.history).toEqual(history);
+    expect(sent).toContainEqual(["ai:progress", { section: "tasks", sentence: "Done." }]);
+  });
   it("reports local status for the stored local settings", async () => {
     let seen;
     deps.generator.localStatus = async l => { seen = l; return { state: "ready" }; };

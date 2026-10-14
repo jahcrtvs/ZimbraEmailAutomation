@@ -12,7 +12,7 @@ const initial = () => ({
   digestStatus: "none", schedule: { date: new Date(), time: "5:00 PM", to: "" }, items: [], modal: null, zimbra: false, toast: null,
   genAt: null, savedAt: null, sentAt: null, history: [], historySel: null, template: DEFAULT_TEMPLATE,
   settings: null, hasKey: { gemini: false, groq: false }, genStep: 0, prepStep: 0, testing: false, testingAI: false, curId: null, genError: null, modalDetails: null, modalCode: null,
-  aiSource: null, aiNote: null, cloudAsk: null, audit: [], localStatus: null, checkingLocal: false
+  aiSource: null, aiNote: null, cloudAsk: null, audit: [], localStatus: null, checkingLocal: false, genLines: []
 });
 
 export function useApp() {
@@ -45,7 +45,7 @@ export function useApp() {
 
   // ---- boot
   React.useEffect(() => {
-    let off = () => {}, offStep = () => {};
+    let off = () => {}, offStep = () => {}, offProgress = () => {};
     api().store.load().then(async d => {
       const settings = d.settings;
       const today = new Date();
@@ -61,7 +61,8 @@ export function useApp() {
     });
     off = api().schedule.onChanged(applyItems);
     offStep = api().zimbra.onStep(n => up({ prepStep: n }));
-    return () => { off(); offStep(); clear(); };
+    offProgress = api().onGenerateProgress?.(p => up(prev => prev.stage === "generating" ? { genLines: [...prev.genLines, p.sentence] } : {})) || (() => {});
+    return () => { off(); offStep(); offProgress(); clear(); };
   }, []);
 
   // ---- autosave notes (debounced)
@@ -88,7 +89,7 @@ export function useApp() {
   const a = {
     go: page => up({ page, historySel: null }),
     newDigest: () => { const c = ref.current; if (["none", "sent"].includes(c.digestStatus)) a.resetDigest(); else up({ page: "new" }); },
-    resetDigest: () => { clear(); const now = new Date(); up(p => ({ page: "new", stage: "form", notes: { ...EMPTY_NOTES }, blocks: [], draft: {}, digestStatus: "none", savedAt: null, sentAt: null, curId: null, date: now, today: now, modal: null, genError: null, aiSource: null, aiNote: null, cloudAsk: null })); api().store.save("draft", { notes: { ...EMPTY_NOTES } }); },
+    resetDigest: () => { clear(); const now = new Date(); up(p => ({ page: "new", stage: "form", notes: { ...EMPTY_NOTES }, blocks: [], draft: {}, digestStatus: "none", savedAt: null, sentAt: null, curId: null, date: now, today: now, modal: null, genError: null, aiSource: null, aiNote: null, cloudAsk: null, genLines: [] })); api().store.save("draft", { notes: { ...EMPTY_NOTES } }); },
     setNotes: notes => up(p => ({ notes, digestStatus: p.digestStatus === "none" ? "draft" : p.digestStatus })),
     setDate: date => up({ date }),
     fillSample:() => up({ notes: { ...SAMPLE_NOTES }, digestStatus: "draft" }),
@@ -100,7 +101,7 @@ export function useApp() {
       if (!hasNotes(c.notes)) return;
       clear();
       const id = ++genId.current;
-      up({ page: "new", stage: "generating", genStep: 0, modal: null, genError: null, cloudAsk: null });
+      up({ page: "new", stage: "generating", genStep: 0, modal: null, genError: null, cloudAsk: null, genLines: [] });
       later(() => up({ genStep: 1 }), 600);
       later(() => up({ genStep: 2 }), 1200);
       try {

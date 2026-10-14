@@ -3,7 +3,7 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { CloudConsentDialog } from "../../../src/renderer/src/screens/dialogs.jsx";
-import { AiSourceBanner } from "../../../src/renderer/src/screens/NewDigest.jsx";
+import { AiSourceBanner, LiveSentences } from "../../../src/renderer/src/screens/NewDigest.jsx";
 
 const ask = { provider: "groq", failure: { code: "UNREACHABLE", message: "Could not reach the local AI server at http://localhost:11434/v1." }, preview: { text: "Today's Work:\nemailed [EMAIL_1]", chars: 31 } };
 
@@ -41,5 +41,24 @@ describe("AiSourceBanner", () => {
       expect(container.textContent).toBe("");
       unmount();
     }
+  });
+});
+
+describe("AiSourceBanner for a mostly-local digest", () => {
+  it("explains which sentences used the built-in rules", () => {
+    render(<AiSourceBanner s={{ aiSource: "local", aiNote: "1 of 2 sentences use the built-in rules because the local AI left them out." }} />);
+    expect(screen.getByText("Some sentences use the built-in rules.")).toBeTruthy();
+    expect(screen.getByText(/1 of 2 sentences/)).toBeTruthy();
+  });
+});
+
+describe("LiveSentences", () => {
+  it("lists the sentences written so far", () => {
+    render(<LiveSentences lines={["Fixed the login page.", "Wrote the unit tests."]} />);
+    expect(screen.getAllByRole("listitem").map(li => li.textContent)).toEqual(["Fixed the login page.", "Wrote the unit tests."]);
+  });
+  it("shows nothing before the first sentence", () => {
+    const { container } = render(<LiveSentences lines={[]} />);
+    expect(container.textContent).toBe("");
   });
 });

@@ -1,5 +1,20 @@
 import { describe, it, expect } from "vitest";
-import { inventsFacts, applyChecks } from "../../../src/main/check.js";
+import { inventsFacts, coversItem, applyChecks } from "../../../src/main/check.js";
+
+describe("coversItem", () => {
+  it("accepts a sentence that rewords its own item, despite tense and typos", () => {
+    expect(coversItem("fixed duplicate result", "Fixed the duplicate results in the query.")).toBe(true);
+    expect(coversItem("advcance study", "Continue advanced study of the next topics.")).toBe(true);
+    expect(coversItem("cannot connect to database", "Unable to connect to the database from the application.")).toBe(true);
+    expect(coversItem("completed execie 5", "Completed exercise 5, verifying its behavior.")).toBe(true);
+  });
+  it("rejects a sentence about something else", () => {
+    expect(coversItem("criteria query", "Continued work on the office repository, focusing on data access methods.")).toBe(false);
+  });
+  it("cannot judge an item made only of filler words, so it accepts", () => {
+    expect(coversItem("continue", "Continue work on the repository.")).toBe(true);
+  });
+});
 
 describe("inventsFacts", () => {
   it("accepts a sentence that only rewords the item", () => {
@@ -53,6 +68,11 @@ describe("applyChecks", () => {
   it("does not trust a partial reply that has more sentences than items", () => {
     const r = applyChecks({ items, parsed: reply(["A.", "B.", "C."]), builtIn, partial: true });
     expect(r.parsed.tasks).toEqual(["Fixed login.", "Wrote tests."]);
+  });
+  it("replaces a sentence that is about a different item than its own", () => {
+    const r = applyChecks({ items, parsed: reply(["Fixed the login page.", "Studied the Hibernate lesson on mapping."]), builtIn });
+    expect(r.parsed.tasks).toEqual(["Fixed the login page.", "Wrote tests."]);
+    expect(r.fallbacks).toBe(1);
   });
   it("returns empty sections as empty and counts only real items", () => {
     const r = applyChecks({ items, parsed: reply(["Fixed the login page.", "Wrote the unit tests."]), builtIn });

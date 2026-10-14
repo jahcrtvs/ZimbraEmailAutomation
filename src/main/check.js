@@ -13,6 +13,19 @@ export function inventsFacts(item, sentence) {
   return caps.some(w => { const l = w.toLowerCase(); return !known.has(l) && !TECH_TERMS.has(l); });
 }
 
+// Words that say what kind of entry an item is, not what it is about.
+const FILLER = new Set(["the", "and", "for", "with", "from", "about", "into", "work", "worked", "continue", "continued", "finish", "finished", "fixed", "completed", "studied", "started", "still", "today", "tomorrow"]);
+const contentStems = s => (s.toLowerCase().match(/[a-z0-9]+/g) || []).filter(w => (w.length >= 3 || /\d/.test(w)) && !FILLER.has(w)).map(w => w.slice(0, 4));
+
+// True when the sentence mentions something from its own item (tense and typos allowed).
+// The schema fixes how many sentences there are, not which item each one is about.
+export function coversItem(item, sentence) {
+  const want = contentStems(item);
+  if (!want.length) return true;
+  const have = new Set(contentStems(sentence));
+  return want.some(w => have.has(w));
+}
+
 // Keeps each good AI sentence; any other item gets its built-in rule sentence.
 export function applyChecks({ items, parsed, builtIn, partial = false }) {
   const out = {};
@@ -23,7 +36,7 @@ export function applyChecks({ items, parsed, builtIn, partial = false }) {
     const aligned = got.length === src.length || (partial && got.length < src.length);
     out[k] = src.map((item, i) => {
       const s = aligned && typeof got[i] === "string" ? got[i].trim() : "";
-      if (s && !inventsFacts(item, s)) return s;
+      if (s && coversItem(item, s) && !inventsFacts(item, s)) return s;
       fallbacks++;
       return base[i];
     });

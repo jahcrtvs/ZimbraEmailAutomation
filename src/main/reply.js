@@ -21,6 +21,8 @@ Notes:
 const labels = { work: "Today's Work", topics: "Topics / Lessons", progress: "Still Working On", blockers: "Blockers", tomorrow: "Tomorrow" };
 export const notesText = n => Object.keys(labels).map(k => `${labels[k]}:\n${(n[k] || "").trim() || "(none)"}`).join("\n\n");
 
+export const SECTION_KEYS = ["tasks", "topics", "weekly_plans", "blockers"];
+
 export function parseReply(text, name = "Gemini") {
   const cleaned = String(text).trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
   let obj;
@@ -31,7 +33,7 @@ export function parseReply(text, name = "Gemini") {
     catch { throw new Error(`${name} returned an unexpected response: not valid JSON`); }
   }
   const out = {};
-  for (const k of ["tasks", "topics", "weekly_plans", "blockers"]) {
+  for (const k of SECTION_KEYS) {
     const v = obj?.[k] ?? [];
     if (!Array.isArray(v) || v.some(x => typeof x !== "string")) throw new Error(`${name} returned an unexpected response: "${k}" must be a list of text`);
     out[k] = v.map(x => x.trim()).filter(Boolean);

@@ -18,6 +18,21 @@ Return ONLY JSON with exactly these keys, each an array of strings:
 Notes:
 `;
 
+export const LOCAL_PROMPT = `You rewrite a trainee developer's rough daily notes into formal status-report sentences for their manager.
+Rules:
+- Each note line becomes exactly one sentence of 12 to 20 words, in the same order, starting with a verb and ending with a period.
+- Work done: past tense. Study topics: "Studied ..." or "Reviewed ...". Plans: "Continue ..." or "Complete ...". Still Working On: "Still working on: ..." or "Investigating ...".
+- Fix the spelling of technical names (Hibernate, Spring Boot, HQL, API, SQL, JDBC, ORM, Java).
+- Never add numbers, results, causes, people or tools the note does not mention. No em dashes, no exclamation marks, no words like "successfully" or "comprehensive".
+Reply only with JSON: {"tasks":[],"topics":[],"weekly_plans":[],"blockers":[]}
+tasks = Today's Work, then Still Working On. topics = Topics / Lessons. weekly_plans = Tomorrow. blockers = Blockers.
+`;
+
+// Examples show tone and structure only; the model must not copy their facts.
+export const localPrompt = examples => examples.length
+  ? LOCAL_PROMPT + "\nExamples of the style to copy (section: note => sentence):\n" + examples.map(e => `${e.section}: ${e.item} => ${e.sentence}`).join("\n") + "\n"
+  : LOCAL_PROMPT;
+
 const labels = { work: "Today's Work", topics: "Topics / Lessons", progress: "Still Working On", blockers: "Blockers", tomorrow: "Tomorrow" };
 export const notesText = n => Object.keys(labels).map(k => `${labels[k]}:\n${(n[k] || "").trim() || "(none)"}`).join("\n\n");
 

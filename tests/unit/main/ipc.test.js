@@ -13,7 +13,7 @@ beforeEach(() => {
     ipcMain: { handle: (ch, fn) => { handlers[ch] = fn; } },
     store, send: (c, p) => sent.push([c, p]),
     secrets: { hasKey: () => false, setKey: () => {} },
-    generator: { generate: async () => [{ type: "text", text: "x" }], testConnection: async () => true },
+    generator: { generate: async () => ({ status: "ok", source: "local", note: null, blocks: [] }), testConnection: async () => true, localStatus: async () => ({ state: "ready" }) },
     scheduler: { upsert: i => [i], setStatus: () => [] },
     zimbra: { checkSession: async () => "connected", openPage: async () => {}, prepareMessage: async (_p, onStep) => { onStep(1); onStep(2); onStep(3); } },
     shell: { openExternal: async () => {} }
@@ -26,7 +26,7 @@ describe("ipc", () => {
   it("loads everything plus hasKey", async () => {
     const r = await call("store:load");
     expect(r.ok).toBe(true);
-    expect(Object.keys(r.value).sort()).toEqual(["draft", "hasKey", "history", "schedule", "settings", "template"]);
+    expect(Object.keys(r.value).sort()).toEqual(["audit", "draft", "hasKey", "history", "schedule", "settings", "template"]);
   });
   it("saves only whitelisted collections (schedule is main-owned)", async () => {
     expect((await call("store:save", "history", [])).ok).toBe(true);
@@ -63,12 +63,49 @@ describe("ipc", () => {
     expect((await call("ai:setKey", "K2", "evil")).ok).toBe(false);
     expect(calls).toHaveLength(1);
   });
-  it("tests the connection for the selected provider", async () => {
+  it("tests the connection for the selected provider with the stored Gemini model", async () => {
     const seen = [];
-    deps.generator.testConnection = async (m, p) => { seen.push([m, p]); return true; };
+    deps.generator.testConnection = async (p, m) => { seen.push([p, m]); return true; };
     registerIpc(deps);
-    await call("ai:test", "flash", "groq");
-    expect(seen).toEqual([["flash", "groq"]]);
+    await call("ai:test", "groq");
+    expect(seen).toEqual([["groq", "flash"]]);
+    expect((await call("ai:test", "evil")).ok).toBe(false);
+    expect(seen).toHaveLength(1);
+  });
+  it("generates with the stored AI settings and ignores any the caller sends", async () => {
+    let seen;
+    deps.generator.generate = async p => { seen = p; return { status: "ok" }; };
+    registerIpc(deps);
+    const r = await call("ai:generate", { notes: { work: "x" }, template: "t", profile: {}, date: "2026-10-13", dateFormat: "long", mode: "cloud", ai: { evil: true } });
+    expect(r.ok).toBe(true);
+    expect(seen.ai).toEqual(deps.store.read("settings").ai);
+    expect(seen.mode).toBe("cloud");
+  });
+  it("defaults the mode to auto and rejects unknown modes", async () => {
+    let seen;
+    deps.generator.generate = async p => { seen = p; return { status: "ok" }; };
+    registerIpc(deps);
+    await call("ai:generate", { notes: {}, template: "t", profile: {}, date: "2026-10-13", dateFormat: "long" });
+    expect(seen.mode).toBe("auto");
+    expect((await call("ai:generate", { notes: {}, mode: "bogus" })).ok).toBe(false);
+  });
+  it("gives the generator the stored history, and forwards sentences as ai:progress events", async () => {
+    let seen;
+    deps.generator.generate = async p => { seen = p; p.onProgress({ section: "tasks", sentence: "Done." }); return { status: "ok" }; };
+    registerIpc(deps);
+    const history = [{ id: "1", status: "sent", notes: {}, blocks: [] }];
+    deps.store.write("history", history);
+    const r = await call("ai:generate", { notes: { work: "x" }, template: "t", profile: {}, date: "2026-10-14", dateFormat: "long", history: [{ evil: true }] });
+    expect(r.ok).toBe(true);
+    expect(seen.history).toEqual(history);
+    expect(sent).toContainEqual(["ai:progress", { section: "tasks", sentence: "Done." }]);
+  });
+  it("reports local status for the stored local settings", async () => {
+    let seen;
+    deps.generator.localStatus = async l => { seen = l; return { state: "ready" }; };
+    registerIpc(deps);
+    expect(await call("ai:status")).toEqual({ ok: true, value: { state: "ready" } });
+    expect(seen).toEqual(deps.store.read("settings").ai.local);
   });
   it("never returns the API key", async () => {
     deps.secrets.hasKey = () => true; deps.secrets.getKey = () => "SECRET";

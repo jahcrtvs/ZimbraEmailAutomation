@@ -4,6 +4,7 @@ import { chromium } from "playwright-core";
 import { createStore } from "./store.js";
 import { createSecrets } from "./secrets.js";
 import { createGenerator } from "./generate.js";
+import { createAudit } from "./audit.js";
 import { createScheduler } from "./scheduler.js";
 import { createZimbra } from "./zimbra.js";
 import { createFakeZimbra } from "./zimbra.fake.js";
@@ -24,7 +25,12 @@ else {
     const dir = app.getPath("userData");
     const store = createStore(dir);
     const secrets = createSecrets(dir, safeStorage);
-    const generator = createGenerator({ getKey: p => secrets.getKey(p) });
+    const generator = createGenerator({
+      getKey: p => secrets.getKey(p),
+      audit: createAudit(store),
+      // Tests must never reach a developer's running Ollama or any cloud service.
+      fetchImpl: process.env.DD_TEST ? async () => { throw new Error("network disabled in tests"); } : undefined
+    });
     const send = (ch, payload) => { if (win && !win.isDestroyed()) win.webContents.send(ch, payload); };
     const zimbra = process.env.DD_TEST
       ? createFakeZimbra(dir)
@@ -39,6 +45,8 @@ else {
       onChange: items => send("schedule:changed", items)
     });
     registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, shell, send });
+    // Load the local model now so the first report does not wait for it. Best effort.
+    generator.warmUp(store.read("settings").ai.local);
     app.setLoginItemSettings({ openAtLogin: !!store.read("settings").app.startWithWindows && !process.env.DD_TEST });
 
     win = new BrowserWindow({

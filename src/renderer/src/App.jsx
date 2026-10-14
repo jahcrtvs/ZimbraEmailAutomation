@@ -7,7 +7,7 @@ import { ScheduledScreen } from "./screens/Scheduled.jsx";
 import { HistoryScreen } from "./screens/History.jsx";
 import { TemplatesScreen } from "./screens/Templates.jsx";
 import { SettingsScreen } from "./screens/Settings.jsx";
-import { ScheduleModal, SendModal, PrepareModal, LoginModal, ZimbraErrorDialog, ZimbraStatusModal, ConfirmCancel, ConfirmRegen, MissedDialog, ViewModal } from "./screens/dialogs.jsx";
+import { ScheduleModal, SendModal, PrepareModal, LoginModal, ZimbraErrorDialog, ZimbraStatusModal, ConfirmCancel, ConfirmRegen, MissedDialog, ViewModal, CloudConsentDialog } from "./screens/dialogs.jsx";
 
 export function App() {
   const { s, a, ready } = useApp();
@@ -36,6 +36,7 @@ export function App() {
       {mt === "regen" && <ConfirmRegen a={a} />}
       {mt === "missed" && <MissedDialog s={s} a={a} />}
       {mt === "view" && <ViewModal s={s} a={a} />}
+      {mt === "cloud" && s.cloudAsk && <CloudConsentDialog s={s} a={a} />}
       {s.toast && <div key={s.toast.id} style={{ position: "absolute", left: 0, right: 0, bottom: 24, display: "flex", justifyContent: "center", zIndex: 200, pointerEvents: "none" }}><div style={{ pointerEvents: "auto" }}><Toast tone={s.toast.tone} message={s.toast.message} onClose={a.clearToast} /></div></div>}
     </AppShell>
   );

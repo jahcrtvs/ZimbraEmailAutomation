@@ -54,6 +54,15 @@ export function polish(line, kind) {
 
 export const lines = (text, kind) => (text || "").split(/\r?\n/).map(l => polish(l, kind)).filter(Boolean);
 
+const itemLines = text => (text || "").split(/\r?\n/).map(l => l.trim().replace(/^[-•*]\s*/, "")).filter(Boolean);
+// The raw items behind buildVars: item N here becomes sentence N there.
+export const noteItems = n => ({
+  tasks: [...itemLines(n.work), ...itemLines(n.progress)],
+  topics: itemLines(n.topics),
+  weekly_plans: itemLines(n.tomorrow),
+  blockers: itemLines(n.blockers)
+});
+
 export function buildVars(n, user, date, dateFormat) {
   const plans = lines(n.tomorrow, "plans");
   return {

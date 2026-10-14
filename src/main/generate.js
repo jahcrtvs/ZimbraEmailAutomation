@@ -1,55 +1,24 @@
-import { buildVars, render } from "../shared/report.js";
+import { buildVars, render, noteItems } from "../shared/report.js";
 import { fromISODate } from "../shared/time.js";
+import { sanitizeNotes, restore } from "../shared/sanitize.js";
+import { PROVIDER_NAMES, isCloudModel, isLoopbackUrl } from "../shared/ai.js";
+import { PROMPT, LOCAL_PROMPT, notesText, parseReply, exampleExchange, SECTION_KEYS } from "./reply.js";
+import { runLocal, localStatus, warmUp } from "./localai.js";
+import { applyChecks } from "./check.js";
+import { pickExamples } from "./examples.js";
 
 export const MODEL_IDS = { flash: "gemini-3.7-flash", pro: "gemini-pro-latest" };
 // Unverified against Groq's current model list.
 export const GROQ_MODEL = "openai/gpt-oss-120b";
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
-const ENDPOINT =id => `https://generativelanguage.googleapis.com/v1beta/models/${id}:generateContent`;
-
-const PROMPT = `You turn a trainee developer's rough daily notes (often just a few keywords) into the bullets of a formal status email to their manager.
-Write in a professional, formal tone, the way a conscientious employee writes a report to a supervisor.
-Rules:
-- Expand each note, even a single keyword, into one complete, well-formed sentence of about 12 to 25 words, ending with a period. Start with the verb.
-- Work done: past tense ("Completed ...", "Worked on ...", "Resolved ..."). Study topics: "Studied ..." or "Reviewed ...". Plans: future intent in the imperative ("Continue ...", "Complete ...", "Practice ...").
-- Use the context the keyword clearly implies to make the sentence read naturally, for example the general purpose of a lesson or what a task is part of (e.g. "lesson in hibernate" -> "Studied the Hibernate lesson, covering how Java objects are mapped to database tables using ORM.").
-- Fix grammar, spelling and capitalisation of technical names (Hibernate, Spring, Spring Boot, HQL, API, SQL, JDBC, ID, ORM, Java).
-- Never invent specific facts: no numbers, results, test outcomes, bug causes, deadlines, people or tools that the notes do not mention or clearly imply. Keep the writer's meaning. Never merge unrelated items. Skip empty input.
-- Keep it professional, not inflated: no "successfully", "comprehensive", "robust", "leveraged", "delved", "seamlessly", no em dashes, no exclamation marks, no marketing tone.
-Return ONLY JSON with exactly these keys, each an array of strings:
-{"tasks":[],"topics":[],"weekly_plans":[],"blockers":[]}
-- tasks: from "Today's Work" plus anything under "Still Working On" (phrase those as "Still working on: ...", or "Investigating ..." / "Continued ...").
-- topics: from "Topics / Lessons".
-- weekly_plans: from "Tomorrow".
-- blockers: from "Blockers".
-
-Notes:
-`;
-
-const labels = { work: "Today's Work", topics: "Topics / Lessons", progress: "Still Working On", blockers: "Blockers", tomorrow: "Tomorrow" };
-const notesText = n => Object.keys(labels).map(k => `${labels[k]}:\n${(n[k] || "").trim() || "(none)"}`).join("\n\n");
-
-function parseReply(text, name = "Gemini") {
-  const cleaned = String(text).trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  let obj;
-  try { obj = JSON.parse(cleaned); } catch { throw new Error(`${name} returned an unexpected response: not valid JSON`); }
-  const out = {};
-  for (const k of ["tasks", "topics", "weekly_plans", "blockers"]) {
-    const v = obj?.[k] ?? [];
-    if (!Array.isArray(v) || v.some(x => typeof x !== "string")) throw new Error(`${name} returned an unexpected response: "${k}" must be a list of text`);
-    out[k] = v.map(x => x.trim()).filter(Boolean);
-  }
-  if (!Object.values(out).some(a => a.length)) throw new Error(`${name} returned an unexpected response: no items`);
-  return out;
-}
+const ENDPOINT = id => `https://generativelanguage.googleapis.com/v1beta/models/${id}:generateContent`;
 
 const RETRY_STATUS = new Set([429, 500, 503]);
 const RETRY_WAITS = [1000, 3000];
 const realSleep = ms => new Promise(r => setTimeout(r, ms));
 
-const PROVIDERS = {
+const CLOUD = {
   gemini: {
-    name: "Gemini",
     request: (key, model, text) => ({
       url: ENDPOINT(MODEL_IDS[model] || MODEL_IDS.flash),
       headers: { "x-goog-api-key": key },
@@ -58,7 +27,6 @@ const PROVIDERS = {
     reply: body => body?.candidates?.[0]?.content?.parts?.[0]?.text
   },
   groq: {
-    name: "Groq",
     request: (key, _model, text) => ({
       url: GROQ_ENDPOINT,
       headers: { Authorization: `Bearer ${key}` },
@@ -68,11 +36,13 @@ const PROVIDERS = {
   }
 };
 
-export function createGenerator({ getKey, fetchImpl = fetch, sleep = realSleep }) {
-  const providerOf = p => (PROVIDERS[p] ? p : "gemini");
+const termsFor = (profile, ai) => [
+  profile?.name, ...String(profile?.name || "").split(/\s+/), ...String(ai.privacyTerms || "").split(/[,\n]/)
+].filter(Boolean);
 
+export function createGenerator({ getKey, fetchImpl = fetch, sleep = realSleep, audit = { record() {} } }) {
   async function attempt(provider, key, model, text) {
-    const P = PROVIDERS[provider];
+    const P = CLOUD[provider], name = PROVIDER_NAMES[provider];
     const req = P.request(key, model, text);
     let res;
     try {
@@ -86,9 +56,9 @@ export function createGenerator({ getKey, fetchImpl = fetch, sleep = realSleep }
     const raw = await res.text();
     if (!res.ok) throw Object.assign(new Error(`${res.status} ${res.statusText}: ${raw.slice(0, 200)}`), { transient: RETRY_STATUS.has(res.status) });
     let body;
-    try { body = JSON.parse(raw); } catch { throw new Error(`${P.name} returned an unexpected response: not valid JSON`); }
+    try { body = JSON.parse(raw); } catch { throw new Error(`${name} returned an unexpected response: not valid JSON`); }
     const reply = P.reply(body);
-    if (typeof reply !== "string") throw new Error(`${P.name} returned an unexpected response: empty`);
+    if (typeof reply !== "string") throw new Error(`${name} returned an unexpected response: empty`);
     return reply;
   }
 
@@ -104,19 +74,63 @@ export function createGenerator({ getKey, fetchImpl = fetch, sleep = realSleep }
     }
   }
 
+  const cloudFor = ai => { const p = ai.fallback?.provider; return CLOUD[p] && getKey(p) ? p : null; };
+
+  async function generate({ notes, template, profile, date, dateFormat, ai, mode = "auto", history = [], onProgress }) {
+    const vars = buildVars(notes, profile, fromISODate(date), dateFormat);
+    const ok = (parsed, source) => ({ status: "ok", source, note: null, blocks: render(template, { ...vars, ...parsed, tomorrow: parsed.weekly_plans }) });
+    const plain = note => ({ status: "ok", source: "template", note, blocks: render(template, vars) });
+    if (mode === "template") return plain("You chose not to send your notes to a cloud service.");
+
+    let failure = null;
+    if (mode === "auto") {
+      try {
+        const items = noteItems(notes);
+        const counts = Object.fromEntries(SECTION_KEYS.map(k => [k, items[k].length]));
+        // Past reports are the user's own text: show them only to a model running on this computer.
+        const own = isLoopbackUrl(ai.local.baseUrl) && !isCloudModel(ai.local.model);
+        const maxTokens = 80 + SECTION_KEYS.flatMap(k => items[k]).reduce((n, it) => n + 50 + Math.ceil(it.length / 3), 0);
+        const { partial, ...raw } = await runLocal({
+          fetchImpl, local: ai.local, counts, maxTokens,
+          system: LOCAL_PROMPT,
+          shots: exampleExchange(pickExamples({ history: own ? history : [], items })),
+          text: "Notes:\n" + notesText(notes),
+          onSentence: onProgress && ((section, sentence) => onProgress({ section, sentence }))
+        });
+        const { parsed, fallbacks, total } = applyChecks({ items, parsed: raw, builtIn: vars, partial: !!partial });
+        if (total && fallbacks === total) return plain("The local AI's sentences could not be used, so the built-in text rules were used.");
+        const note = fallbacks ? `${fallbacks} of ${total} sentences use the built-in rules because the local AI left them out or added details your notes did not mention.` : null;
+        return { ...ok(parsed, "local"), note };
+      } catch (e) { failure = { code: e.code || "UNKNOWN", message: e.message }; }
+    }
+    const why = failure ? failure.message + " " : "";
+    const provider = cloudFor(ai);
+    if (!provider) return plain(why + "No cloud fallback is set up, so the built-in text rules were used.");
+
+    const s = sanitizeNotes(notes, { terms: termsFor(profile, ai) });
+    if (s.blocked) return plain(why + s.blocked + " The built-in text rules were used.");
+    const text = notesText(s.notes);
+    if (mode === "auto" && !ai.fallback.auto) return { status: "needs-consent", provider, failure, preview: { text, chars: text.length } };
+
+    const name = PROVIDER_NAMES[provider];
+    try {
+      audit.record({ provider, reason: failure ? failure.code : "user-requested", chars: text.length });
+      const parsed = parseReply(await call(provider, ai.geminiModel, PROMPT + text), name);
+      for (const k of Object.keys(parsed)) parsed[k] = parsed[k].map(x => restore(x, s.map));
+      return ok(parsed, provider);
+    } catch (e) {
+      return plain(`${name} failed: ${e.message} The built-in text rules were used.`);
+    }
+  }
+
   return {
-    async generate({ notes, template, profile, date, dateFormat, model, provider }) {
-      const prov = providerOf(provider);
-      const d = fromISODate(date);
-      const local = buildVars(notes, profile, d, dateFormat);
-      if (!getKey(prov)) return render(template, local);
-      const ai = parseReply(await call(prov, model, PROMPT + notesText(notes)), PROVIDERS[prov].name);
-      return render(template, { ...local, ...ai, tomorrow: ai.weekly_plans });
-    },
-    async testConnection(model, provider) {
-      const prov = providerOf(provider);
-      if (!getKey(prov)) throw new Error("No API key saved.");
-      await call(prov, model, 'Reply with the single word "ok" in a JSON object.');
+    generate,
+    localStatus: local => localStatus({ fetchImpl, local }),
+    warmUp: local => warmUp({ fetchImpl, local }),
+    async testConnection(provider, geminiModel = "flash") {
+      if (!CLOUD[provider]) throw new Error("Unknown provider.");
+      if (!getKey(provider)) throw new Error("No API key saved.");
+      await call(provider, geminiModel, 'Reply with the single word "ok" in a JSON object.');
       return true;
     }
   };

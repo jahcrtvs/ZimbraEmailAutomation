@@ -1,5 +1,9 @@
-import { noteItems } from "../shared/report.js";
+import { noteItems, polish } from "../shared/report.js";
 import { SECTION_KEYS } from "./reply.js";
+import { coversItem, inventsFacts } from "./check.js";
+
+// The kind polish() uses for each reply key.
+const KIND = { tasks: "tasks", topics: "topics", weekly_plans: "plans", blockers: "tasks" };
 
 // Report section titles (default template) -> the reply key that fills them.
 const TITLES = { "TASK TODAY": "tasks", "PLANS FOR THE WEEK": "weekly_plans", "TOPICS": "topics", "BLOCKERS": "blockers" };
@@ -27,7 +31,9 @@ export function pairsFromHistory(history) {
       if (!k || !items[k].length || b.items.length !== items[k].length) continue;
       items[k].forEach((item, i) => {
         const sentence = String(b.items[i] || "").trim(), key = k + "|" + item + "|" + sentence;
-        if (sentence && !seen.has(key)) { seen.add(key); out.push({ section: k, item, sentence }); }
+        // Only sentences worth copying: not the built-in rule's own output, and about their own item.
+        const good = sentence && sentence !== polish(item, KIND[k]) && coversItem(item, sentence) && !inventsFacts(item, sentence);
+        if (good && !seen.has(key)) { seen.add(key); out.push({ section: k, item, sentence }); }
       });
     }
   }

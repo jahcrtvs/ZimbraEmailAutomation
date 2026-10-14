@@ -9,15 +9,15 @@ const none = { tasks: [], topics: [], weekly_plans: [], blockers: [] };
 
 describe("pairsFromHistory", () => {
   it("pairs the n-th item with the n-th sentence of its section", () => {
-    const h = [entry({ work: "fixed login\nwrote tests", topics: "hql" }, [sec("TASK TODAY", ["Fixed the login page.", "Wrote unit tests."]), sec("TOPICS", ["Studied HQL."]), { type: "text", text: "Regards," }])];
+    const h = [entry({ work: "fixed login\nwrote tests", topics: "hql" }, [sec("TASK TODAY", ["Fixed the login page.", "Wrote unit tests."]), sec("TOPICS", ["Studied the HQL lesson."]), { type: "text", text: "Regards," }])];
     expect(pairsFromHistory(h)).toEqual([
       { section: "tasks", item: "fixed login", sentence: "Fixed the login page." },
       { section: "tasks", item: "wrote tests", sentence: "Wrote unit tests." },
-      { section: "topics", item: "hql", sentence: "Studied HQL." }
+      { section: "topics", item: "hql", sentence: "Studied the HQL lesson." }
     ]);
   });
   it("skips a section whose sentence count differs from its item count (edited report)", () => {
-    const h = [entry({ work: "a\nb", topics: "hql" }, [sec("TASK TODAY", ["Only one."]), sec("TOPICS", ["Studied HQL."])])];
+    const h = [entry({ work: "a\nb", topics: "hql" }, [sec("TASK TODAY", ["Only one."]), sec("TOPICS", ["Studied the HQL lesson."])])];
     expect(pairsFromHistory(h).map(p => p.section)).toEqual(["topics"]);
   });
   it("ignores unsent entries, unknown section titles and blank sentences", () => {
@@ -26,6 +26,14 @@ describe("pairsFromHistory", () => {
   });
   it("copes with entries that have no notes or blocks", () => {
     expect(pairsFromHistory([{ status: "sent" }, null, {}])).toEqual([]);
+  });
+  it("drops sentences that are just the built-in rule's output", () => {
+    const h = [entry({ work: "criteria query" }, [sec("TASK TODAY", ["Worked on Criteria API queries."])])];
+    expect(pairsFromHistory(h)).toEqual([]);
+  });
+  it("drops pairs whose sentence is about a different item (reordered by hand)", () => {
+    const h = [entry({ work: "fixed login\nwrote tests" }, [sec("TASK TODAY", ["Wrote the unit tests.", "Fixed the login page."])])];
+    expect(pairsFromHistory(h)).toEqual([]);
   });
   it("removes exact duplicates", () => {
     const e = entry({ work: "a" }, [sec("TASK TODAY", ["Did a."])]);

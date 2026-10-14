@@ -122,6 +122,17 @@ describe("runLocal streaming", () => {
     expect(out).toEqual({ tasks: ["Did A."], topics: [], weekly_plans: [], blockers: [], partial: true });
     expect(f.calls).toHaveLength(1);
   });
+  it("keeps the sentences of a stream that ended before the JSON was complete", async () => {
+    const f = seq(sse('{"tasks":["Did A.","Un'));
+    const out = await runLocal({ fetchImpl: f, local, text: "t", onSentence: () => {} });
+    expect(out).toEqual({ tasks: ["Did A."], topics: [], weekly_plans: [], blockers: [], partial: true });
+    expect(f.calls).toHaveLength(1);
+  });
+  it("uses the token budget it is given", async () => {
+    const f = seq(chat(good));
+    await runLocal({ fetchImpl: f, local, text: "t", maxTokens: 777 });
+    expect(JSON.parse(f.calls[0].init.body).max_tokens).toBe(777);
+  });
   it("fails with STREAM when the connection drops before any sentence", async () => {
     const f = seq(sse('{"tasks":["Un', new Error("socket closed")));
     await expect(runLocal({ fetchImpl: f, local, text: "t", onSentence: () => {} })).rejects.toMatchObject({ code: "STREAM" });

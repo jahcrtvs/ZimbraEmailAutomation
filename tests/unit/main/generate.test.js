@@ -135,6 +135,20 @@ describe("local quality", () => {
     expect(hits("groq.com")).toHaveLength(2);
     for (const c of hits("groq.com")) expect(c.init.body).not.toMatch(/SECRET SENTENCE|Orion|=>/);
   });
+  it("does not show past reports to a server that is not on this computer", async () => {
+    for (const lc of [{ baseUrl: "http://192.168.1.5:11434/v1", model: "qwen2.5:3b-instruct" }, { baseUrl: "http://localhost:11434/v1", model: "gpt-oss:20b-cloud" }]) {
+      const bodies = [];
+      const g = createGenerator({ getKey: () => null, sleep: async () => {}, audit, fetchImpl: async (_u, init) => { bodies.push(init.body); return chat(aligned(two)); } });
+      await g.generate(payload({ notes: two, history, ai: aiSettings({ local: lc }) }));
+      expect(bodies).toHaveLength(1);
+      expect(bodies[0]).not.toContain("Fixed the login page.");
+      expect(bodies[0]).toContain("Notes:");
+    }
+  });
+  it("sizes the token budget from the length of the notes", async () => {
+    await gen({ local: local(aligned(two)) }).generate(payload({ notes: two }));
+    expect(JSON.parse(calls[0].init.body).max_tokens).toBe(80 + 2 * (50 + Math.ceil("fixed login".length / 3)));
+  });
   it("exposes warmUp for the stored local settings", async () => {
     const g = gen({ local: () => chat("ok") });
     await g.warmUp(aiSettings().local);

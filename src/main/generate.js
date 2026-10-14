@@ -1,7 +1,7 @@
 import { buildVars, render, noteItems } from "../shared/report.js";
 import { fromISODate } from "../shared/time.js";
 import { sanitizeNotes, restore } from "../shared/sanitize.js";
-import { PROVIDER_NAMES } from "../shared/ai.js";
+import { PROVIDER_NAMES, isCloudModel, isLoopbackUrl } from "../shared/ai.js";
 import { PROMPT, LOCAL_PROMPT, notesText, parseReply, exampleExchange, SECTION_KEYS } from "./reply.js";
 import { runLocal, localStatus, warmUp } from "./localai.js";
 import { applyChecks } from "./check.js";
@@ -87,10 +87,13 @@ export function createGenerator({ getKey, fetchImpl = fetch, sleep = realSleep, 
       try {
         const items = noteItems(notes);
         const counts = Object.fromEntries(SECTION_KEYS.map(k => [k, items[k].length]));
+        // Past reports are the user's own text: show them only to a model running on this computer.
+        const own = isLoopbackUrl(ai.local.baseUrl) && !isCloudModel(ai.local.model);
+        const maxTokens = 80 + SECTION_KEYS.flatMap(k => items[k]).reduce((n, it) => n + 50 + Math.ceil(it.length / 3), 0);
         const { partial, ...raw } = await runLocal({
-          fetchImpl, local: ai.local, counts,
+          fetchImpl, local: ai.local, counts, maxTokens,
           system: LOCAL_PROMPT,
-          shots: exampleExchange(pickExamples({ history, items })),
+          shots: exampleExchange(pickExamples({ history: own ? history : [], items })),
           text: "Notes:\n" + notesText(notes),
           onSentence: onProgress && ((section, sentence) => onProgress({ section, sentence }))
         });

@@ -11,6 +11,9 @@ describe("coversItem", () => {
   it("rejects a sentence about something else", () => {
     expect(coversItem("criteria query", "Continued work on the office repository, focusing on data access methods.")).toBe(false);
   });
+  it("accepts any sentence for a 'nothing to report' item", () => {
+    for (const none of ["none", "nothing", "nil"]) expect(coversItem(none, "There are no blockers at this time.")).toBe(true);
+  });
   it("cannot judge an item made only of filler words, so it accepts", () => {
     expect(coversItem("continue", "Continue work on the repository.")).toBe(true);
   });

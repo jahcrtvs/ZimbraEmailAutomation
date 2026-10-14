@@ -71,3 +71,11 @@ notes -> pick examples -> prompt (fixed prefix + notes) -> streamed schema-valid
 ## Out of scope
 
 Bigger models, per-item calls, GPU setup, changes to the cloud providers.
+
+## Revisions after probing Ollama 0.40.2 (2026-10-14)
+
+- `num_ctx` is dropped: `/v1` cannot set it and the default of 4096 is stable between runs.
+- `keep_alive` is sent in the `/v1` request body and Ollama honours it.
+- The JSON schema fixes each array's length to the number of note items (`minItems == maxItems`), so sentence N is item N. A reply with the wrong count makes that whole section use the built-in rules; a stream that drops part-way is aligned by prefix.
+- Live sentences in the UI use a new `ai:progress` event.
+- If every sentence is rejected by the check, the result is reported as source `template`.

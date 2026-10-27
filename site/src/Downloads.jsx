@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Download, ArrowLeft, ChevronDown } from "lucide-react";
 import { DOWNLOAD_URL } from "./config.js";
+import Footer from "./Footer.jsx";
 
 const LABEL = { feat: "New", fix: "Fix", perf: "Faster", docs: "Docs", refactor: "Change", chore: "Change", other: "Change" };
 const mb = n => Math.round(n / 1048576) + " MB";
@@ -70,10 +71,7 @@ export default function Downloads() {
         {state.releases.map((r, i) => <Release key={r.version} r={r} latest={i === 0} />)}
         <p className="aside dl-note">Older versions are kept for reference. If the app says an update is required, install the latest one.</p>
       </main>
-      <footer className="foot container">
-        <a className="mark" href="/"><img src="/icon.png" alt="" width="24" height="24" />Daily Digest</a>
-        <span>Developed by Jah Dela Cruz</span>
-      </footer>
+      <Footer />
     </>
   );
 }

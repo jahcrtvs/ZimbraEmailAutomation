@@ -1,6 +1,7 @@
 import { Download, Laptop, ShieldCheck, Lock, KeyRound, Coffee } from "lucide-react";
 import { VERSION, SIZE, DOWNLOADS_PAGE, MODEL, DONATE_URL } from "./config.js";
-import { Nav, HeroArt, Pairs, ZimbraRail, Redact, CopyCommand, Steps } from "./demos.jsx";
+import Footer from "./Footer.jsx";
+import { Nav,HeroArt, Pairs, ZimbraRail, Redact, CopyCommand, Steps } from "./demos.jsx";
 
 const PAIRS = [
   ["fixed duplicate result", "Resolved the issue of duplicate results by optimizing the query logic."],
@@ -103,12 +104,24 @@ export default function App() {
               <p>No. You sign in inside Chrome, and the app reuses that session.</p>
             </details>
             <details>
+              <summary>Do I need to sign in to the app?</summary>
+              <p>No. Daily Digest has no account. You only sign in to Zimbra inside Chrome, and a cloud API key is optional.</p>
+            </details>
+            <details>
               <summary>Do schedules send by themselves?</summary>
               <p>No. A schedule only prepares the email, and a missed one waits for you.</p>
             </details>
             <details>
               <summary>Does it work on Linux or Mac?</summary>
               <p>Not yet. Linux and Mac support is coming soon. For now, it needs Windows 10 or 11 with Chrome installed.</p>
+            </details>
+            <details>
+              <summary>Where do I get a Gemini or Groq API key?</summary>
+              <p>It is optional, only for the cloud fallback. Create a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a> for Gemini or at the <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">Groq Console</a>, then paste it in Settings. Windows stores it encrypted.</p>
+            </details>
+            <details>
+              <summary>Need support or found a bug?</summary>
+              <p>Email <a href="mailto:markjustine.work@gmail.com">markjustine.work@gmail.com</a>.</p>
             </details>
           </div>
         </section>
@@ -125,15 +138,7 @@ export default function App() {
         </section>
       </main>
 
-      <footer className="foot container">
-        <a className="mark" href="#top"><img src="/icon.png" alt="" width="24" height="24" />Daily Digest</a>
-        <span>Developed by Jah Dela Cruz</span>
-        <span>Version {VERSION}</span>
-        <a href={DOWNLOADS_PAGE}>Downloads</a>
-        <a href="#setup">Setup</a>
-        <a href="#privacy">Privacy</a>
-        {DONATE_URL && <a href={DONATE_URL} target="_blank" rel="noopener noreferrer">Buy me a coffee</a>}
-      </footer>
+      <Footer home />
     </>
   );
 }

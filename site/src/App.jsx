@@ -16,7 +16,7 @@ function DownloadButton() {
   return (
     <div className="get">
       <a className="btn" href={DOWNLOAD_URL}><Download size={18} aria-hidden="true" />Download for Windows</a>
-      <p className="get-note">Free, version {VERSION} for Windows 10 and 11, {SIZE}</p>
+      <p className="get-note">Free, version {VERSION} for Windows 10 and 11, {SIZE}. <a href="/downloads">Older versions</a></p>
     </div>
   );
 }
@@ -129,6 +129,7 @@ export default function App() {
         <a className="mark" href="#top"><img src="/icon.png" alt="" width="24" height="24" />Daily Digest</a>
         <span>Developed by Jah Dela Cruz</span>
         <span>Version {VERSION}</span>
+        <a href="/downloads">All versions</a>
         <a href="#setup">Setup</a>
         <a href="#privacy">Privacy</a>
         {DONATE_URL && <a href={DONATE_URL} target="_blank" rel="noopener noreferrer">Buy me a coffee</a>}

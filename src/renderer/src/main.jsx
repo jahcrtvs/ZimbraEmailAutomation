@@ -13,5 +13,9 @@ import "./styles/tokens/spacing.css";
 import "./styles/tokens/base.css";
 import "./app.css";
 import { App } from "./App.jsx";
+import { ErrorBoundary, reportError } from "./screens/CrashScreen.jsx";
 
-createRoot(document.getElementById("root")).render(<App />);
+window.addEventListener("error", e => reportError("window", e.error || e.message));
+window.addEventListener("unhandledrejection", e => reportError("window (promise)", e.reason));
+
+createRoot(document.getElementById("root")).render(<ErrorBoundary><App /></ErrorBoundary>);

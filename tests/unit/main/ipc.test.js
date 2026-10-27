@@ -113,6 +113,17 @@ describe("ipc", () => {
     expect(await call("ai:status")).toEqual({ ok: true, value: { state: "ready" } });
     expect(seen).toEqual(deps.store.read("settings").ai.local);
   });
+  it("writes page errors to the crash log, cut short", async () => {
+    const seen = [];
+    deps.log = (where, text) => seen.push([where, text]);
+    registerIpc(deps);
+    expect(await call("log:error", { where: "screen", message: "boom", stack: "Error: boom\n at x" })).toEqual({ ok: true, value: true });
+    await call("log:error", { where: "w".repeat(100), message: "m".repeat(10000) });
+    expect(seen[0]).toEqual(["page screen", "Error: boom\n at x"]);
+    expect(seen[1][0]).toHaveLength(5 + 40);
+    expect(seen[1][1]).toHaveLength(4000);
+    expect((await call("log:error")).ok).toBe(true);
+  });
   it("never returns the API key", async () => {
     deps.secrets.hasKey = () => true; deps.secrets.getKey = () => "SECRET";
     registerIpc(deps);

@@ -1,4 +1,4 @@
-﻿import { app, BrowserWindow, ipcMain, safeStorage, shell, Notification } from "electron";
+﻿import { app, BrowserWindow, ipcMain, safeStorage, shell, Notification, dialog } from "electron";
 import { join } from "node:path";
 import { chromium } from "playwright-core";
 import { createStore } from "./store.js";
@@ -12,6 +12,7 @@ import { createChrome } from "./chrome.js";
 import { createOllamaStarter } from "./ollama.js";
 import { createUpdateChecker } from "./update.js";
 import { registerIpc } from "./ipc.js";
+import { createCrashLog, catchUncaught, watchRenderer } from "./crash.js";
 import { blocksToText, subjectFor } from "../shared/report.js";
 import { fromISODate } from "../shared/time.js";
 
@@ -23,6 +24,8 @@ if (process.env.DD_USER_DATA) app.setPath("userData", process.env.DD_USER_DATA);
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 else {
   let win = null;
+  const crash = createCrashLog(join(app.getPath("userData"), "crash.log"));
+  catchUncaught(process, crash.log);
   app.on("second-instance", () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
 
   app.whenReady().then(() => {
@@ -48,7 +51,7 @@ else {
     });
     // Tests must not depend on the website being reachable; the checker treats a failed request as "up to date".
     const update = createUpdateChecker({ baseUrl: UPDATE_SITE, version: app.getVersion(), fetchImpl: process.env.DD_TEST ? async () => { throw new Error("network disabled in tests"); } : undefined });
-    registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, shell, send, update });
+    registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, shell, send, update, log: crash.log });
     // Load the local model now so the first report does not wait for it. Best effort.
     generator.warmUp(store.read("settings").ai.local);
     app.setLoginItemSettings({ openAtLogin: !!store.read("settings").app.startWithWindows && !process.env.DD_TEST });
@@ -66,10 +69,18 @@ else {
       if (!app.isQuitting && (chrome.isOpen() || store.read("schedule").some(i => i.status === "scheduled"))) { e.preventDefault(); win.minimize(); }
     });
     win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    watchRenderer(win.webContents, crash.log, {
+      onGiveUp: () => dialog.showErrorBox("Daily Digest stopped working", "The window crashed several times. Quit Daily Digest and open it again. Details were saved to " + crash.file)
+    });
     if (process.env.ELECTRON_RENDERER_URL) win.loadURL(process.env.ELECTRON_RENDERER_URL);
     else win.loadFile(join(__dirname, "../renderer/index.html"));
 
     scheduler.start();
+  }).catch(e => {
+    // Without this the app would fail to start with no window and no message.
+    crash.log("startup", e);
+    dialog.showErrorBox("Daily Digest could not start", String(e.message || e) + "\n\nDetails were saved to " + crash.file);
+    app.quit();
   });
   app.on("before-quit", () => { app.isQuitting = true; });
   app.on("window-all-closed", () => app.quit());

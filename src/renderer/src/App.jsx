@@ -7,6 +7,7 @@ import { ScheduledScreen } from "./screens/Scheduled.jsx";
 import { HistoryScreen } from "./screens/History.jsx";
 import { TemplatesScreen } from "./screens/Templates.jsx";
 import { SettingsScreen } from "./screens/Settings.jsx";
+import { NotificationsScreen } from "./screens/Notifications.jsx";
 import { UpdateBanner, UpdateRequired } from "./screens/UpdateGate.jsx";
 import { CrashScreen } from "./screens/CrashScreen.jsx";
 import { ScheduleModal, SendModal, PrepareModal, LoginModal, ZimbraErrorDialog, ZimbraStatusModal, ConfirmCancel, ConfirmRegen, MissedDialog, ViewModal, CloudConsentDialog } from "./screens/dialogs.jsx";
@@ -16,14 +17,16 @@ export function App() {
   if (bootError) return <CrashScreen title="Daily Digest could not load your data" message="Your notes, history and settings could not be read. Reload to try again." details={bootError} />;
   if (!ready) return null;
   const nSch = s.items.filter(i => i.status === "scheduled").length;
+  const nUnread = s.notifications.filter(n => !n.read).length;
   const items = [
     { id: "new", label: "New Digest", icon: "square-pen", kbd: "Ctrl+N" },
     { id: "scheduled", label: "Scheduled", icon: "clock", count: nSch || undefined, countTone: "info" },
     { id: "history", label: "History", icon: "history" },
     { id: "templates", label: "Templates", icon: "layout-template" },
+    { id: "notifications", label: "Notifications", icon: "bell", count: nUnread || undefined, countTone: "accent" },
     { id: "settings", label: "Settings", icon: "settings" }
   ];
-  const Screen = { new: NewDigestScreen, scheduled: ScheduledScreen, history: HistoryScreen, templates: TemplatesScreen, settings: SettingsScreen }[s.page];
+  const Screen = { new: NewDigestScreen, scheduled: ScheduledScreen, history: HistoryScreen, templates: TemplatesScreen, notifications: NotificationsScreen, settings: SettingsScreen }[s.page];
   const mt = s.modal && s.modal.t;
   return (
     <AppShell status={<AppStatus s={s} />}>

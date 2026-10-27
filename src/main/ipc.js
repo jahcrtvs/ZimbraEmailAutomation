@@ -8,7 +8,7 @@ const wrap = fn => async (_e, ...args) => {
 };
 const httpUrl = u => { let p; try { p = new URL(u); } catch { throw new Error("Invalid URL."); } if (!/^https?:$/.test(p.protocol)) throw new Error("Only http(s) URLs are allowed."); return u; };
 
-export function registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, send, update, shell, log = () => {}, onSettingsSaved = () => {} }) {
+export function registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, send, update, shell, notifications, log = () => {}, onSettingsSaved = () => {} }) {
   const h = (ch, fn) => ipcMain.handle(ch, wrap(fn));
   const checkProvider = p => { if (!AI_PROVIDERS.includes(p)) throw new Error("Unknown provider."); return p; };
   // The renderer never supplies AI settings: what gets sent, and where, is decided from the stored settings.
@@ -33,7 +33,19 @@ export function registerIpc({ ipcMain, store, secrets, generator, scheduler, zim
   h("ai:setKey", (key, p = "gemini") => { secrets.setKey(key, checkProvider(p)); return true; });
   // Page errors go to the same crash log. The page sends only text, and it is cut short.
   h("log:error", ({ where, message, stack } = {}) => { log("page " + String(where || "").slice(0, 40), String(stack || message).slice(0, 4000)); return true; });
-  h("update:check", () => update.check());
+  h("update:check", async () => {
+    const u = await update.check();
+    // Once per version, so the check every few hours does not repeat it.
+    if (u.state !== "ok") {
+      try { notifications.add({ kind: "update", key: "update:" + u.latest, title: "Daily Digest " + u.latest + " is available", body: u.state === "required" ? "This version is no longer supported. Download the update to keep using Daily Digest." : "Download it from the Daily Digest website." }); }
+      catch (e) { log("notify", e); }
+    }
+    return u;
+  });
+  // The page may only add errors it already showed, and the text is cut short.
+  h("notifications:addError", ({ title, body } = {}) => notifications.add({ kind: "error", title: String(title || "Something went wrong").slice(0, 120), body: String(body || "").slice(0, 500) }));
+  h("notifications:markAllRead", () => notifications.markAllRead());
+  h("notifications:clear", () => notifications.clear());
   // The address comes from the checker, never from the renderer.
   h("update:download", async () => { await shell.openExternal(update.downloadUrl); return true; });
   // The Zimbra address is the saved one, never one the renderer sends.

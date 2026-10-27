@@ -12,7 +12,7 @@ const initial = () => ({
   digestStatus: "none", schedule: { date: new Date(), time: "5:00 PM", to: "" }, items: [], modal: null, zimbra: false, toast: null,
   genAt: null, savedAt: null, sentAt: null, history: [], historySel: null, template: DEFAULT_TEMPLATE,
   settings: null, hasKey: { gemini: false, groq: false }, genStep: 0, prepStep: 0, testing: false, testingAI: false, curId: null, genError: null, modalDetails: null, modalCode: null,
-  update: null, updateDismissed: false, aiSource: null, aiNote: null, cloudAsk: null, audit: [], localStatus: null, checkingLocal: false, genLines: []
+  update: null, updateDismissed: false, aiSource: null, aiNote: null, cloudAsk: null, audit: [], localStatus: null, checkingLocal: false, genLines: [], notifications: []
 });
 
 export function useApp() {
@@ -32,8 +32,10 @@ export function useApp() {
     up({ toast: { message, tone, id } });
     later(() => up(p => p.toast && p.toast.id === id ? { toast: null } : {}), 3200);
   };
+  // Errors also go to Notifications, so one missed toast is not lost.
+  const noteError = (title, body) => { api().notifications?.addError(title, body).catch(() => {}); };
   // For saves that would otherwise fail without the user knowing.
-  const failed = what => e => toast("Could not " + what + ": " + (e?.message || e), "danger");
+  const failed = what => e => { toast("Could not " + what + ": " + (e?.message || e), "danger"); noteError("Could not " + what, String(e?.message || e)); };
   const subject = (c = ref.current) => subjectFor(c.settings.email.defaultSubject, c.date, c.settings.email.dateFormat);
 
   const maybeShowMissed = items => {
@@ -48,13 +50,13 @@ export function useApp() {
 
   // ---- boot
   React.useEffect(() => {
-    let off = () => {}, offStep = () => {}, offProgress = () => {};
+    let off = () => {}, offStep = () => {}, offProgress = () => {}, offNotes = () => {};
     api().store.load().then(async d => {
       const settings = d.settings;
       const today = new Date();
       // Restore a back-filled digest date from the draft; never a future one.
       const saved = /^\d{4}-\d{2}-\d{2}$/.test(d.draft.date || "") && hasNotes(d.draft.notes) && d.draft.date < toISODate(today) ? fromISODate(d.draft.date) : today;
-      setS(p => ({ ...p, settings, hasKey: d.hasKey, audit: d.audit, template: d.template.body, today, date: saved,
+      setS(p => ({ ...p, settings, hasKey: d.hasKey, audit: d.audit, template: d.template.body, today, date: saved, notifications: d.notifications || [],
         notes: { ...EMPTY_NOTES, ...d.draft.notes }, digestStatus: hasNotes(d.draft.notes) ? "draft" : "none",
         history: d.history.map(historyFromDisk), items: d.schedule.map(itemFromDisk),
         schedule: { date: today, time: settings.general.defaultSendTime, to: settings.email.defaultRecipient } }));
@@ -65,7 +67,8 @@ export function useApp() {
     off = api().schedule.onChanged(applyItems);
     offStep = api().zimbra.onStep(n => up({ prepStep: n }));
     offProgress = api().onGenerateProgress?.(p => up(prev => prev.stage === "generating" ? { genLines: [...prev.genLines, p.sentence] } : {})) || (() => {});
-    return () => { off(); offStep(); offProgress(); clear(); };
+    offNotes = api().notifications?.onChanged(notifications => up({ notifications })) || (() => {});
+    return () => { off(); offStep(); offProgress(); offNotes(); clear(); };
   }, []);
 
   // ---- update check: on launch, then every few hours while the app stays open
@@ -94,12 +97,17 @@ export function useApp() {
       return true;
     } catch (e) {
       up({ modal: { t: e.code === "LOGIN" ? "login" : "zerr" }, modalDetails: e.message, modalCode: e.code, zimbra: e.code === "LOGIN" ? false : ref.current.zimbra });
+      noteError(e.code === "LOGIN" ? "Zimbra login required" : "Email could not be prepared in Zimbra", e.code === "LOGIN" ? "Sign in to Zimbra, then prepare the email again." : String(e.message || e));
       return false;
     }
   }
 
   const a = {
-    go: page => up({ page, historySel: null }),
+    go: page => {
+      up({ page, historySel: null });
+      if (page === "notifications" && ref.current.notifications.some(n => !n.read)) api().notifications.markAllRead().catch(() => {});
+    },
+    clearNotifications: () => api().notifications.clear().catch(failed("clear notifications")),
     newDigest: () => { const c = ref.current; if (["none", "sent"].includes(c.digestStatus)) a.resetDigest(); else up({ page: "new" }); },
     resetDigest: () => { clear(); const now = new Date(); up(p => ({ page: "new", stage: "form", notes: { ...EMPTY_NOTES }, blocks: [], draft: {}, digestStatus: "none", savedAt: null, sentAt: null, curId: null, date: now, today: now, modal: null, genError: null, aiSource: null, aiNote: null, cloudAsk: null, genLines: [] })); api().store.save("draft", { notes: { ...EMPTY_NOTES } }).catch(failed("clear your notes")); },
     setNotes: notes => up(p => ({ notes, digestStatus: p.digestStatus === "none" ? "draft" : p.digestStatus })),
@@ -128,6 +136,7 @@ export function useApp() {
         if (id !== genId.current) return;
         clear();
         up({ stage: "error", genError: { details: e.message } });
+        noteError("Report could not be generated", String(e.message || e));
       }
     },
     regenerate: () => { if (ref.current.savedAt) up({ modal: { t: "regen" } }); else a.generate(); },

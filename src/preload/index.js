@@ -20,6 +20,12 @@ contextBridge.exposeInMainWorld("api", {
     onChanged: on("schedule:changed")
   },
   update: { check: () => call("update:check"), download: () => call("update:download") },
+  notifications: {
+    addError: (title, body) => call("notifications:addError", { title, body }),
+    markAllRead: () => call("notifications:markAllRead"),
+    clear: () => call("notifications:clear"),
+    onChanged: on("notifications:changed")
+  },
   logError: e => call("log:error", e),
   generate: p => call("ai:generate", p),
   onGenerateProgress: on("ai:progress"),

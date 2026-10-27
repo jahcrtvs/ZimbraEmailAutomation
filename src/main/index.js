@@ -6,6 +6,8 @@ import { createSecrets } from "./secrets.js";
 import { createGenerator } from "./generate.js";
 import { createAudit } from "./audit.js";
 import { createScheduler } from "./scheduler.js";
+import { createNotifications } from "./notifications.js";
+import { createAlarm } from "./alarm.js";
 import { createZimbra } from "./zimbra.js";
 import { createFakeZimbra } from "./zimbra.fake.js";
 import { createChrome } from "./chrome.js";
@@ -43,16 +45,28 @@ else {
     const chrome = createChrome({ profileDir: join(dir, "chrome-profile"), launch: (profile, opts) => chromium.launchPersistentContext(profile, opts) });
     app.on("before-quit", () => { chrome.close(); });
     const zimbra = process.env.DD_TEST ? createFakeZimbra(dir) : createZimbra({ getContext: () => chrome.context() });
+    const notifications = createNotifications({
+      store,
+      popup: (title, body) => {
+        if (!Notification.isSupported()) return;
+        const n = new Notification({ title, body });
+        n.on("click", () => { if (win && !win.isDestroyed()) { win.restore(); win.show(); win.focus(); } });
+        n.show();
+      },
+      onChange: list => send("notifications:changed", list)
+    });
     const scheduler = createScheduler({
       store,
       prepare: it => zimbra.prepareMessage({ url: store.read("settings").zimbra.url, to: it.recipient, subject: it.subject || subjectFor(store.read("settings").email.defaultSubject, fromISODate(it.date), store.read("settings").email.dateFormat), body: blocksToText(it.blocks) }),
-      notify: (title, body) => { if (Notification.isSupported()) new Notification({ title, body }).show(); },
+      // The popup is shown even when the list cannot be saved.
+      notify: (title, body, kind = "reminder") => { try { notifications.add({ kind, title, body }, { show: true }); } catch (e) { crash.log("notify", e); } },
       onChange: items => send("schedule:changed", items)
     });
+    const alarm = createAlarm({ store, notifications });
     // Tests must not depend on the website being reachable; the checker treats a failed request as "up to date".
     const update = createUpdateChecker({ baseUrl: UPDATE_SITE, version: app.getVersion(), fetchImpl: process.env.DD_TEST ? async () => { throw new Error("network disabled in tests"); } : undefined });
     const applyLogin = settings => app.setLoginItemSettings({ openAtLogin: !!settings.app.startWithWindows && !process.env.DD_TEST });
-    registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, shell, send, update, log: crash.log, onSettingsSaved: applyLogin });
+    registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, shell, send, update, notifications, log: crash.log, onSettingsSaved: applyLogin });
     // Load the local model now so the first report does not wait for it. Best effort.
     generator.warmUp(store.read("settings").ai.local);
     applyLogin(store.read("settings"));
@@ -64,10 +78,10 @@ else {
     });
     win.removeMenu();
     win.once("ready-to-show", () => win.show());
-    // Keep running (minimised) while digests are scheduled so the timer can fire, and while the
+    // Keep running (minimised) while digests are scheduled or the alarm is on so the timers can fire, and while the
     // Zimbra Chrome window is open, because quitting closes it and would lose an unsent message.
     win.on("close", e => {
-      if (!app.isQuitting && (chrome.isOpen() || store.read("schedule").some(i => i.status === "scheduled"))) { e.preventDefault(); win.minimize(); }
+      if (!app.isQuitting && (chrome.isOpen() || store.read("settings").alarm.enabled || store.read("schedule").some(i => i.status === "scheduled"))) { e.preventDefault(); win.minimize(); }
     });
     win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
     // The window only ever shows the app page; any other page would get window.api.
@@ -79,6 +93,7 @@ else {
     else win.loadFile(join(__dirname, "../renderer/index.html"));
 
     scheduler.start();
+    alarm.start();
   }).catch(e => {
     // Without this the app would fail to start with no window and no message.
     crash.log("startup", e);

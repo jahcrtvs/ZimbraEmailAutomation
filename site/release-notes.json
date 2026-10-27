@@ -33,5 +33,8 @@
   "1.4.0": [
     { "type": "feat", "text": "Save a generated Report as a draft and pick it up again next time you open Daily Digest." },
     { "type": "fix", "text": "Dropdown menus in Settings are no longer cut off, so every date format can be chosen." }
+  ],
+  "1.4.1": [
+    { "type": "fix", "text": "Closing the window now asks whether to keep Daily Digest running or quit, so you can always close the app." }
   ]
 }

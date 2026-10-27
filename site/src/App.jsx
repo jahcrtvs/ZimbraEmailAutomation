@@ -1,5 +1,5 @@
 import { Download, Laptop, ShieldCheck, Lock, KeyRound, Coffee } from "lucide-react";
-import { VERSION, SIZE, DOWNLOAD_URL, MODEL, DONATE_URL } from "./config.js";
+import { VERSION, SIZE, DOWNLOADS_PAGE, MODEL, DONATE_URL } from "./config.js";
 import { Nav, HeroArt, Pairs, ZimbraRail, Redact, CopyCommand, Steps } from "./demos.jsx";
 
 const PAIRS = [
@@ -15,8 +15,8 @@ function CoffeeButton({ className = "" }) {
 function DownloadButton() {
   return (
     <div className="get">
-      <a className="btn" href={DOWNLOAD_URL}><Download size={18} aria-hidden="true" />Download for Windows</a>
-      <p className="get-note">Free, version {VERSION} for Windows 10 and 11, {SIZE}. <a href="/downloads">Older versions</a></p>
+      <a className="btn" href={DOWNLOADS_PAGE}><Download size={18} aria-hidden="true" />Download for Windows</a>
+      <p className="get-note">Free, version {VERSION} for Windows 10 and 11, {SIZE}</p>
     </div>
   );
 }
@@ -39,7 +39,7 @@ export default function App() {
   return (
     <>
       <a className="skip" href="#main">Skip to content</a>
-      <Nav download={DOWNLOAD_URL} donate={DONATE_URL} />
+      <Nav download={DOWNLOADS_PAGE} donate={DONATE_URL} />
 
       <main id="main">
         <section className="hero" id="top" data-nav="">
@@ -129,7 +129,7 @@ export default function App() {
         <a className="mark" href="#top"><img src="/icon.png" alt="" width="24" height="24" />Daily Digest</a>
         <span>Developed by Jah Dela Cruz</span>
         <span>Version {VERSION}</span>
-        <a href="/downloads">All versions</a>
+        <a href={DOWNLOADS_PAGE}>Downloads</a>
         <a href="#setup">Setup</a>
         <a href="#privacy">Privacy</a>
         {DONATE_URL && <a href={DONATE_URL} target="_blank" rel="noopener noreferrer">Buy me a coffee</a>}

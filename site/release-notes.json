@@ -29,5 +29,9 @@
     { "type": "feat", "text": "A new look with dot-matrix titles and the app logo." },
     { "type": "fix", "text": "The app recovers from crashes and shows an error instead of an empty window." },
     { "type": "fix", "text": "Sent and scheduled status stay correct, and the Digest date is kept with your draft." }
+  ],
+  "1.4.0": [
+    { "type": "feat", "text": "Save a generated Report as a draft and pick it up again next time you open Daily Digest." },
+    { "type": "fix", "text": "Dropdown menus in Settings are no longer cut off, so every date format can be chosen." }
   ]
 }

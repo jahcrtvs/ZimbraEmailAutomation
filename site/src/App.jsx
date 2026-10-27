@@ -81,7 +81,7 @@ export default function App() {
             </ul>
             <Redact />
           </div>
-          <Shot className="shot-consent" src="/screens/consent.png" alt="Dialog asking before notes are sent to a cloud service, showing an email replaced with [EMAIL_1]" w="420" h="569" />
+          <Shot className="shot-consent" src="/screens/consent.png" alt="Dialog asking before notes are sent to a cloud service, showing an email replaced with [EMAIL_1]" w="420" h="570" />
         </section>
 
         <section className="setup" id="setup" data-nav="setup">

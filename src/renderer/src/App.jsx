@@ -8,10 +8,12 @@ import { HistoryScreen } from "./screens/History.jsx";
 import { TemplatesScreen } from "./screens/Templates.jsx";
 import { SettingsScreen } from "./screens/Settings.jsx";
 import { UpdateBanner, UpdateRequired } from "./screens/UpdateGate.jsx";
+import { CrashScreen } from "./screens/CrashScreen.jsx";
 import { ScheduleModal, SendModal, PrepareModal, LoginModal, ZimbraErrorDialog, ZimbraStatusModal, ConfirmCancel, ConfirmRegen, MissedDialog, ViewModal, CloudConsentDialog } from "./screens/dialogs.jsx";
 
 export function App() {
-  const { s, a, ready } = useApp();
+  const { s, a, ready, bootError } = useApp();
+  if (bootError) return <CrashScreen title="Daily Digest could not load your data" message="Your notes, history and settings could not be read. Reload to try again." details={bootError} />;
   if (!ready) return null;
   const nSch = s.items.filter(i => i.status === "scheduled").length;
   const items = [

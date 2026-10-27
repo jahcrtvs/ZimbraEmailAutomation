@@ -18,6 +18,7 @@ const initial = () => ({
 export function useApp() {
   const [s, setS] = React.useState(initial);
   const [ready, setReady] = React.useState(false);
+  const [bootError, setBootError] = React.useState(null);
   const ref = React.useRef(s); ref.current = s;
   const up = p => setS(prev => ({ ...prev, ...(typeof p === "function" ? p(prev) : p) }));
   const timers = React.useRef([]);
@@ -31,6 +32,8 @@ export function useApp() {
     up({ toast: { message, tone, id } });
     later(() => up(p => p.toast && p.toast.id === id ? { toast: null } : {}), 3200);
   };
+  // For saves that would otherwise fail without the user knowing.
+  const failed = what => e => toast("Could not " + what + ": " + (e?.message || e), "danger");
   const subject = (c = ref.current) => subjectFor(c.settings.email.defaultSubject, c.date, c.settings.email.dateFormat);
 
   const maybeShowMissed = items => {
@@ -58,7 +61,7 @@ export function useApp() {
       setReady(true);
       maybeShowMissed(d.schedule.map(itemFromDisk));
       api().zimbra.check(settings.zimbra.url).then(r => up({ zimbra: r === "connected" }), () => up({ zimbra: false }));
-    });
+    }).catch(e => setBootError(String(e?.message || e)));
     off = api().schedule.onChanged(applyItems);
     offStep = api().zimbra.onStep(n => up({ prepStep: n }));
     offProgress = api().onGenerateProgress?.(p => up(prev => prev.stage === "generating" ? { genLines: [...prev.genLines, p.sentence] } : {})) || (() => {});
@@ -77,7 +80,7 @@ export function useApp() {
   // ---- autosave notes (debounced)
   React.useEffect(() => {
     if (!ready) return;
-    const t = setTimeout(() => api().store.save("draft", { notes: s.notes, date: toISODate(s.date) }), 600);
+    const t = setTimeout(() => api().store.save("draft", { notes: s.notes, date: toISODate(s.date) }).catch(failed("save your notes")), 600);
     return () => clearTimeout(t);
   }, [s.notes, s.date, ready]);
 
@@ -98,7 +101,7 @@ export function useApp() {
   const a = {
     go: page => up({ page, historySel: null }),
     newDigest: () => { const c = ref.current; if (["none", "sent"].includes(c.digestStatus)) a.resetDigest(); else up({ page: "new" }); },
-    resetDigest: () => { clear(); const now = new Date(); up(p => ({ page: "new", stage: "form", notes: { ...EMPTY_NOTES }, blocks: [], draft: {}, digestStatus: "none", savedAt: null, sentAt: null, curId: null, date: now, today: now, modal: null, genError: null, aiSource: null, aiNote: null, cloudAsk: null, genLines: [] })); api().store.save("draft", { notes: { ...EMPTY_NOTES } }); },
+    resetDigest: () => { clear(); const now = new Date(); up(p => ({ page: "new", stage: "form", notes: { ...EMPTY_NOTES }, blocks: [], draft: {}, digestStatus: "none", savedAt: null, sentAt: null, curId: null, date: now, today: now, modal: null, genError: null, aiSource: null, aiNote: null, cloudAsk: null, genLines: [] })); api().store.save("draft", { notes: { ...EMPTY_NOTES } }).catch(failed("clear your notes")); },
     setNotes: notes => up(p => ({ notes, digestStatus: p.digestStatus === "none" ? "draft" : p.digestStatus })),
     setDate: date => up({ date }),
     fillSample:() => up({ notes: { ...SAMPLE_NOTES }, digestStatus: "draft" }),
@@ -150,7 +153,8 @@ export function useApp() {
       } catch (e) { up({ modal: { ...c.modal, fail: true } }); }
     },
     async cancelSchedule(id) {
-      applyItems(await api().schedule.setStatus(id, "cancelled"));
+      try { applyItems(await api().schedule.setStatus(id, "cancelled")); }
+      catch (e) { up({ modal: null }); failed("cancel the digest")(e); return; }
       up(p => ({ digestStatus: id === p.curId ? "ready" : p.digestStatus, curId: id === p.curId ? null : p.curId, modal: null }));
       toast("Digest cancelled.", "info");
     },
@@ -176,22 +180,30 @@ export function useApp() {
       const c = ref.current, time = formatTime(new Date());
       const entry = { id: uid(), date: c.date, dateLabel: fmt(c.date), time, to: c.schedule.to, blocks: c.blocks, notes: c.notes, status: "sent" };
       const history = [entry, ...c.history];
-      api().store.save("history", history.map(historyToDisk));
+      api().store.save("history", history.map(historyToDisk)).catch(failed("save this digest to History"));
       up({ digestStatus: "sent", sentAt: time, history });
     },
     async prepareMissed(id) {
       const it = ref.current.items.find(i => i.id === id);
       const ok = await runPrepare({ to: it.to, subj: it.subject || subject(), blocks: it.blocks, forCur: false });
-      if (ok) applyItems(await api().schedule.setStatus(id, "prepared"));
+      if (ok) await api().schedule.setStatus(id, "prepared").then(applyItems, failed("update the schedule"));
     },
-    async dismissMissed(id) { applyItems(await api().schedule.setStatus(id, "cancelled")); up({ modal: null }); toast("Digest cancelled. No email was sent.", "info"); },
+    async dismissMissed(id) {
+      try { applyItems(await api().schedule.setStatus(id, "cancelled")); }
+      catch (e) { up({ modal: null }); failed("cancel the digest")(e); return; }
+      up({ modal: null }); toast("Digest cancelled. No email was sent.", "info");
+    },
     selectHistory: id => up({ historySel: id }),
     duplicate: h => { up({ notes: { ...h.notes }, page: "new", stage: "form", digestStatus: "draft", blocks: [], savedAt: null, curId: null }); toast("Notes copied. Generate and review the new digest.", "info"); },
-    saveTemplate: tpl => { up({ template: tpl }); api().store.save("template", { ...{ id: "daily-digest", name: "Daily Digest" }, body: tpl, variables: ["date", "name", "role", "tasks", "topics", "weekly_plans", "blockers", "tomorrow"] }); toast("Template saved."); },
+    saveTemplate: tpl => { up({ template: tpl }); api().store.save("template", { ...{ id: "daily-digest", name: "Daily Digest" }, body: tpl, variables: ["date", "name", "role", "tasks", "topics", "weekly_plans", "blockers", "tomorrow"] }).then(() => toast("Template saved."), failed("save the template")); },
     async saveSettings({ settings, apiKey }) {
-      await api().store.save("settings", settings);
+      try { await api().store.save("settings", settings); }
+      catch (e) { failed("save settings")(e); return false; }
       const prov = settings.ai.fallback.provider;
-      if (apiKey && apiKey.trim() && prov !== "none") { await api().setApiKey(apiKey, prov); up(p => ({ hasKey: { ...p.hasKey, [prov]: true } })); }
+      if (apiKey && apiKey.trim() && prov !== "none") {
+        try { await api().setApiKey(apiKey, prov); up(p => ({ hasKey: { ...p.hasKey, [prov]: true } })); }
+        catch (e) { failed("save the API key")(e); return false; }
+      }
       up(p => ({ settings, schedule: p.digestStatus === "scheduled" ? p.schedule : { ...p.schedule, to: settings.email.defaultRecipient, time: settings.general.defaultSendTime } }));
       toast("Settings saved.");
     },
@@ -223,5 +235,5 @@ export function useApp() {
     return () => window.removeEventListener("keydown", h);
   }, []);
 
-  return { s, a, ready };
+  return { s, a, ready, bootError };
 }

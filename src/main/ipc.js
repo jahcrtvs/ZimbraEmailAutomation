@@ -8,7 +8,7 @@ const wrap = fn => async (_e, ...args) => {
 };
 const httpUrl = u => { let p; try { p = new URL(u); } catch { throw new Error("Invalid URL."); } if (!/^https?:$/.test(p.protocol)) throw new Error("Only http(s) URLs are allowed."); return u; };
 
-export function registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, send, update, shell }) {
+export function registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, send, update, shell, log = () => {} }) {
   const h = (ch, fn) => ipcMain.handle(ch, wrap(fn));
   const checkProvider = p => { if (!AI_PROVIDERS.includes(p)) throw new Error("Unknown provider."); return p; };
   // The renderer never supplies AI settings: what gets sent, and where, is decided from the stored settings.
@@ -25,6 +25,8 @@ export function registerIpc({ ipcMain, store, secrets, generator, scheduler, zim
   h("ai:status", () => generator.localStatus(ai().local));
   h("ai:test", p => generator.testConnection(checkProvider(p), ai().geminiModel));
   h("ai:setKey", (key, p = "gemini") => { secrets.setKey(key, checkProvider(p)); return true; });
+  // Page errors go to the same crash log. The page sends only text, and it is cut short.
+  h("log:error", ({ where, message, stack } = {}) => { log("page " + String(where || "").slice(0, 40), String(stack || message).slice(0, 4000)); return true; });
   h("update:check", () => update.check());
   // The address comes from the checker, never from the renderer.
   h("update:download", async () => { await shell.openExternal(update.downloadUrl); return true; });

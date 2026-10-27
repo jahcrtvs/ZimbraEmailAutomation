@@ -12,8 +12,10 @@ const initial = () => ({
   digestStatus: "none", schedule: { date: new Date(), time: "5:00 PM", to: "" }, items: [], modal: null, zimbra: false, toast: null,
   genAt: null, savedAt: null, sentAt: null, history: [], historySel: null, template: DEFAULT_TEMPLATE,
   settings: null, hasKey: { gemini: false, groq: false }, genStep: 0, prepStep: 0, testing: false, testingAI: false, curId: null, genError: null, modalDetails: null, modalCode: null,
-  update: null, updateDismissed: false, aiSource: null, aiNote: null, cloudAsk: null, audit: [], localStatus: null, checkingLocal: false, genLines: [], notifications: []
+  update: null, updateDismissed: false, aiSource: null, aiNote: null, cloudAsk: null, audit: [], localStatus: null, checkingLocal: false, genLines: [], notifications: [], draftReport: null
 });
+// A saved draft Report is reopened only if it has sentences to show.
+const validReport = r => r && Array.isArray(r.blocks) && r.blocks.length > 0 ? r : null;
 
 export function useApp() {
   const [s, setS] = React.useState(initial);
@@ -56,8 +58,10 @@ export function useApp() {
       const today = new Date();
       // Restore a back-filled digest date from the draft; never a future one.
       const saved = /^\d{4}-\d{2}-\d{2}$/.test(d.draft.date || "") && hasNotes(d.draft.notes) && d.draft.date < toISODate(today) ? fromISODate(d.draft.date) : today;
+      const report = hasNotes(d.draft.notes) ? validReport(d.draft.report) : null;
       setS(p => ({ ...p, settings, hasKey: d.hasKey, audit: d.audit, template: d.template.body, today, date: saved, notifications: d.notifications || [],
-        notes: { ...EMPTY_NOTES, ...d.draft.notes }, digestStatus: hasNotes(d.draft.notes) ? "draft" : "none",
+        notes: { ...EMPTY_NOTES, ...d.draft.notes }, digestStatus: report ? "ready" : hasNotes(d.draft.notes) ? "draft" : "none",
+        ...(report ? { stage: "review", blocks: report.blocks, aiSource: report.aiSource || null, aiNote: report.aiNote || null, genAt: report.genAt || null, savedAt: report.savedAt || null, draftReport: report } : {}),
         history: d.history.map(historyFromDisk), items: d.schedule.map(itemFromDisk),
         schedule: { date: today, time: settings.general.defaultSendTime, to: settings.email.defaultRecipient } }));
       setReady(true);
@@ -83,16 +87,17 @@ export function useApp() {
   // ---- autosave notes (debounced)
   React.useEffect(() => {
     if (!ready) return;
-    const t = setTimeout(() => api().store.save("draft", { notes: s.notes, date: toISODate(s.date) }).catch(failed("save your notes")), 600);
+    // The saved draft Report goes along, or saving the notes would drop it.
+    const t = setTimeout(() => api().store.save("draft", { notes: s.notes, date: toISODate(s.date), report: s.draftReport }).catch(failed("save your notes")), 600);
     return () => clearTimeout(t);
-  }, [s.notes, s.date, ready]);
+  }, [s.notes, s.date, s.draftReport, ready]);
 
   async function runPrepare({ to, subj, blocks, forCur }) {
     clear();
     up({ modal: { t: "prepare" }, prepStep: 0 });
     try {
       await api().zimbra.prepare({ to, subject: subj, body: blocksToText(blocks) });
-      up(p => ({ prepStep: 3, zimbra: true, digestStatus: forCur ? "prepared" : p.digestStatus }));
+      up(p => ({ prepStep: 3, zimbra: true, digestStatus: forCur ? "prepared" : p.digestStatus, draftReport: forCur ? null : p.draftReport }));
       toast("Email prepared in Zimbra.");
       return true;
     } catch (e) {
@@ -109,7 +114,7 @@ export function useApp() {
     },
     clearNotifications: () => api().notifications.clear().catch(failed("clear notifications")),
     newDigest: () => { const c = ref.current; if (["none", "sent"].includes(c.digestStatus)) a.resetDigest(); else up({ page: "new" }); },
-    resetDigest: () => { clear(); const now = new Date(); up(p => ({ page: "new", stage: "form", notes: { ...EMPTY_NOTES }, blocks: [], draft: {}, digestStatus: "none", savedAt: null, sentAt: null, curId: null, date: now, today: now, modal: null, genError: null, aiSource: null, aiNote: null, cloudAsk: null, genLines: [] })); api().store.save("draft", { notes: { ...EMPTY_NOTES } }).catch(failed("clear your notes")); },
+    resetDigest: () => { clear(); const now = new Date(); up(p => ({ page: "new", stage: "form", notes: { ...EMPTY_NOTES }, blocks: [], draft: {}, digestStatus: "none", savedAt: null, sentAt: null, curId: null, date: now, today: now, modal: null, genError: null, aiSource: null, aiNote: null, cloudAsk: null, genLines: [], draftReport: null })); api().store.save("draft", { notes: { ...EMPTY_NOTES }, report: null }).catch(failed("clear your notes")); },
     setNotes: notes => up(p => ({ notes, digestStatus: p.digestStatus === "none" ? "draft" : p.digestStatus })),
     setDate: date => up({ date }),
     fillSample:() => up({ notes: { ...SAMPLE_NOTES }, digestStatus: "draft" }),
@@ -140,7 +145,16 @@ export function useApp() {
       }
     },
     regenerate: () => { if (ref.current.savedAt) up({ modal: { t: "regen" } }); else a.generate(); },
-    editNotes: () => up({ stage: "form", digestStatus: "draft" }),
+    // A Report saved for the old notes must not come back after they change.
+    editNotes: () => up({ stage: "form", digestStatus: "draft", draftReport: null }),
+    async saveDraft() {
+      const c = ref.current;
+      const report = { blocks: c.blocks, aiSource: c.aiSource, aiNote: c.aiNote, genAt: c.genAt, savedAt: c.savedAt, at: formatTime(new Date()) };
+      try { await api().store.save("draft", { notes: c.notes, date: toISODate(c.date), report }); }
+      catch (e) { failed("save the draft")(e); return; }
+      up({ draftReport: report });
+      toast("Draft saved. It opens here next time.");
+    },
     startEdit: () => up(p => ({ stage: "editing", draft: draftOf(p.blocks) })),
     setDraft: draft => up({ draft }),
     saveEdit: () => { up(p => ({ stage: "review", savedAt: formatTime(new Date()), blocks: p.blocks.map((b, i) => b.type === "section" && p.draft[i] != null ? { ...b, items: p.draft[i].split(/\r?\n/).map(x => x.trim()).filter(Boolean) } : b) })); toast("Saved"); },
@@ -157,7 +171,7 @@ export function useApp() {
         const id = c.curId || uid();
         const item = { id, ...sch, subject: subject(c), status: "scheduled", blocks: c.blocks };
         disk(await api().schedule.upsert(itemToDisk(item)));
-        up({ schedule: sch, digestStatus: "scheduled", stage: "review", modal: null, curId: id });
+        up({ schedule: sch, digestStatus: "scheduled", stage: "review", modal: null, curId: id, draftReport: null });
         toast(editId ? "Schedule updated." : "Digest scheduled for " + sch.time + ".");
       } catch (e) { up({ modal: { ...c.modal, fail: true } }); }
     },
@@ -192,7 +206,7 @@ export function useApp() {
       // Show Sent only once it is in History, or a restart would lose it.
       try { await api().store.save("history", history.map(historyToDisk)); }
       catch (e) { failed("save this digest to History")(e); return; }
-      up({ digestStatus: "sent", sentAt: time, history });
+      up({ digestStatus: "sent", sentAt: time, history, draftReport: null });
     },
     async prepareMissed(id) {
       const it = ref.current.items.find(i => i.id === id);

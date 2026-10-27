@@ -22,8 +22,8 @@ export const DEFAULTS = () => ({
     ai: { local: { ...DEFAULT_LOCAL }, fallback: { provider: "groq", auto: false }, geminiModel: "flash", privacyTerms: "" },
     app: { startWithWindows: true }
   },
-  // date is "" for drafts saved before it was kept.
-  draft: { notes: { ...EMPTY_NOTES }, date: "" }
+  // date is "" for drafts saved before it was kept. report is the generated Report saved with Save as Draft, or null.
+  draft: { notes: { ...EMPTY_NOTES }, date: "", report: null }
 });
 
 const isObj = v => v && typeof v === "object" && !Array.isArray(v);

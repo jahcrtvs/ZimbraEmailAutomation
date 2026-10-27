@@ -21,7 +21,7 @@ A Windows desktop app that turns rough daily notes into a formal status email, t
 - **Scheduling.** Pick a date and time. When it is due, the app prepares the email in Zimbra. If the app was not running at that time, you get a "Missed" prompt on the next launch and nothing is auto-sent.
 - **Editable report template** with variables, plus a live preview.
 - **History** of sent digests, with a Duplicate action that copies the notes into a new draft.
-- **Start with Windows** (on by default) so scheduled digests can fire. Closing the window minimises the app instead of quitting while anything is scheduled.
+- **Start with Windows** (on by default) so scheduled digests can fire. Closing the window minimises the app instead of quitting while anything is scheduled or while its Zimbra Chrome window is open (quitting the app closes that Chrome window).
 
 ## Install
 
@@ -77,7 +77,7 @@ Daily Digest writes the sentences with a small AI model that runs on your own co
 
 If the badge says **Not running** or **Model missing**, Settings shows what to do. See [Troubleshooting](#troubleshooting).
 
-Do not pick a model whose name ends in `-cloud` or `:cloud`. Ollama runs those on its own servers, so your notes would leave your computer. Settings warns you if you do.
+Do not pick a model whose name ends in `-cloud` or `:cloud`. Ollama runs those on its own servers, so your notes would leave your computer. Settings warns you if you do. For such a model, or a server address that is not on this computer, the app treats the server like a cloud service: emails, links, names and your hidden words are replaced first, notes that look like they hold a password or key are not sent, and past reports are never shown to it.
 
 Other servers that speak the OpenAI chat API (LM Studio, llama.cpp) may work if you change the server address, but only Ollama is tested.
 
@@ -135,6 +135,7 @@ You can view, edit or cancel scheduled digests on the **Scheduled** page.
 ## Privacy and safety
 
 - **No Zimbra password** is ever typed, read or stored. You sign in yourself in Chrome.
+- The app controls its Chrome window over a private pipe, not a debugging port, so other programs on your computer cannot attach to your signed-in Zimbra session.
 - **API keys** (only needed for the optional cloud fallback) are encrypted with Windows (Electron `safeStorage`) and stay in the main process. The settings screen can write a key but can never read it back.
 - With the local AI, your notes go only to the Ollama server on your own computer. The main process, not the screen, decides what is sent and where, from your saved settings.
 - Only the sanitised text of your notes can ever go to a cloud provider, and only after you approve it (or turn on automatic sending). Your Zimbra content is never sent anywhere.
@@ -157,7 +158,7 @@ You can view, edit or cancel scheduled digests on the **Scheduled** page.
 | "AI was not used for this digest." | The banner says why. The digest was built with the built-in text rules. Fix the cause and click **Regenerate**. |
 | The cloud dialog never appears | You have no fallback provider or key saved, so the app goes straight to the built-in rules. |
 
-The selectors that find Zimbra's fields live in `src/main/zimbra.selectors.js`. They were written for the classic Zimbra web client and might need adjusting for your server. Run `node scripts/probe-zimbra.mjs <your-zimbra-url>` with the New Message window open to list the real element ids.
+The selectors that find Zimbra's fields live in `src/main/zimbra.selectors.js`. They were written for the classic Zimbra web client and might need adjusting for your server. Quit Daily Digest, then run `node scripts/probe-zimbra.mjs <your-zimbra-url>`. It opens Chrome with the app's profile; open a New Message there and press Enter in the terminal to list the real element ids.
 
 ## Development
 
@@ -192,7 +193,7 @@ design_handoff_daily_digest/   the original UI spec and prototype
 
 Key design points:
 
-- **Zimbra automation** uses Playwright over the Chrome DevTools Protocol, attached to a Chrome that the app launches with its own profile. The module exposes only `checkSession`, `prepareMessage` and `openPage`.
+- **Zimbra automation** uses Playwright to launch the installed Chrome with the app's own profile (`launchPersistentContext`, over a pipe; no debugging port is opened). The module exposes only `checkSession`, `prepareMessage` and `openPage`.
 - **Schedule data** is owned by the main process. The UI changes it only through `schedule:upsert` and `schedule:setStatus`.
 - **Recipients** are inserted one whole address at a time and committed with `;`, then verified by reading the To row back.
 

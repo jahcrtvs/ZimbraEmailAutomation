@@ -1,5 +1,6 @@
 ﻿import { describe, it, expect } from "vitest";
-import { findChrome, ensureChrome } from "../../../src/main/chrome.js";
+import fs from "node:fs";
+import { findChrome, createChrome } from "../../../src/main/chrome.js";
 
 describe("findChrome", () => {
   it("checks the standard install locations in order", () => {
@@ -9,27 +10,59 @@ describe("findChrome", () => {
   });
 });
 
-describe("ensureChrome", () => {
-  const base = { port: 9222, profileDir: "C:\\p", url: "https://z" };
-  it("does nothing when the port is already up", async () => {
-    let spawned = false;
-    await ensureChrome({ ...base, isUp: async () => true, spawnImpl: () => { spawned = true; } });
-    expect(spawned).toBe(false);
-  });
+const fakeCtx = () => {
+  const handlers = {};
+  return { closed: 0, on: (ev, fn) => { handlers[ev] = fn; }, close: async function () { this.closed++; handlers.close?.(); }, emitClose: () => handlers.close?.() };
+};
+
+describe("createChrome", () => {
   it("throws NO_CHROME when Chrome is missing", async () => {
-    await expect(ensureChrome({ ...base, isUp: async () => false, find: () => null })).rejects.toMatchObject({ code: "NO_CHROME" });
+    const c = createChrome({ profileDir: "C:\\p", find: () => null, launch: async () => fakeCtx() });
+    await expect(c.context()).rejects.toMatchObject({ code: "NO_CHROME" });
   });
-  it("launches Chrome with a dedicated profile and waits for the port", async () => {
-    let args, ups = 0;
-    await ensureChrome({
-      ...base, find: () => "chrome.exe", wait: async () => {},
-      isUp: async () => ++ups > 2,
-      spawnImpl: (exe, a) => { args = [exe, a]; return { unref() {} }; }
-    });
-    expect(args[0]).toBe("chrome.exe");
-    expect(args[1]).toEqual(expect.arrayContaining(["--remote-debugging-port=9222", "--user-data-dir=C:\\p", "--no-first-run", "https://z"]));
+  it("launches the installed Chrome with a dedicated profile and no debugging port", async () => {
+    let got;
+    const c = createChrome({ profileDir: "C:\\p", find: () => "chrome.exe", launch: async (dir, opts) => { got = [dir, opts]; return fakeCtx(); } });
+    await c.context();
+    expect(got[0]).toBe("C:\\p");
+    expect(got[1]).toMatchObject({ executablePath: "chrome.exe", headless: false });
+    expect(JSON.stringify(got[1])).not.toMatch(/remote-debugging/);
   });
-  it("throws UNREACHABLE if the port never comes up", async () => {
-    await expect(ensureChrome({ ...base, find: () => "c", wait: async () => {}, timeoutMs: 3, isUp: async () => false, spawnImpl: () => ({ unref() {} }) })).rejects.toMatchObject({ code: "UNREACHABLE" });
+  it("reuses one Chrome, even for calls made at the same time", async () => {
+    let launches = 0;
+    const c = createChrome({ profileDir: "p", find: () => "c", launch: async () => { launches++; return fakeCtx(); } });
+    const [a, b] = await Promise.all([c.context(), c.context()]);
+    expect(a).toBe(b);
+    expect(await c.context()).toBe(a);
+    expect(launches).toBe(1);
+  });
+  it("starts Chrome again after the user closes its window", async () => {
+    const made = [];
+    const c = createChrome({ profileDir: "p", find: () => "c", launch: async () => { const x = fakeCtx(); made.push(x); return x; } });
+    expect(c.isOpen()).toBe(false);
+    (await c.context()).emitClose();
+    expect(c.isOpen()).toBe(false);
+    await c.context();
+    expect(c.isOpen()).toBe(true);
+    expect(made).toHaveLength(2);
+  });
+  it("throws UNREACHABLE when Chrome will not start, and retries next time", async () => {
+    let n = 0;
+    const c = createChrome({ profileDir: "p", find: () => "c", launch: async () => { if (n++ === 0) throw new Error("profile in use\nstack"); return fakeCtx(); } });
+    await expect(c.context()).rejects.toMatchObject({ code: "UNREACHABLE", message: expect.stringContaining("profile in use") });
+    await expect(c.context()).resolves.toBeTruthy();
+  });
+  it("close() shuts the Chrome it started", async () => {
+    const x = fakeCtx();
+    const c = createChrome({ profileDir: "p", find: () => "c", launch: async () => x });
+    await c.context();
+    await c.close();
+    expect(x.closed).toBe(1);
+  });
+  it("no main-process code opens a debugging port", () => {
+    for (const f of ["src/main/chrome.js", "src/main/index.js", "src/main/zimbra.js"]) {
+      const src = fs.readFileSync(f, "utf8").replace(/\/\/.*$/gm, "");
+      expect(src).not.toMatch(/remote-debugging-port|connectOverCDP/);
+    }
   });
 });

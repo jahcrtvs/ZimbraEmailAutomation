@@ -8,13 +8,13 @@ import { createAudit } from "./audit.js";
 import { createScheduler } from "./scheduler.js";
 import { createZimbra } from "./zimbra.js";
 import { createFakeZimbra } from "./zimbra.fake.js";
-import { ensureChrome } from "./chrome.js";
+import { createChrome } from "./chrome.js";
+import { createOllamaStarter } from "./ollama.js";
 import { registerIpc } from "./ipc.js";
 import { blocksToText, subjectFor } from "../shared/report.js";
 import { fromISODate } from "../shared/time.js";
 
 if (process.env.DD_USER_DATA) app.setPath("userData", process.env.DD_USER_DATA);
-const PORT = 9222;
 
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 else {
@@ -29,15 +29,13 @@ else {
       getKey: p => secrets.getKey(p),
       audit: createAudit(store),
       // Tests must never reach a developer's running Ollama or any cloud service.
-      fetchImpl: process.env.DD_TEST ? async () => { throw new Error("network disabled in tests"); } : undefined
+      fetchImpl: process.env.DD_TEST ? async () => { throw new Error("network disabled in tests"); } : undefined,
+      startLocal: process.env.DD_TEST ? undefined : createOllamaStarter()
     });
     const send = (ch, payload) => { if (win && !win.isDestroyed()) win.webContents.send(ch, payload); };
-    const zimbra = process.env.DD_TEST
-      ? createFakeZimbra(dir)
-      : createZimbra({
-          connect: () => chromium.connectOverCDP(`http://127.0.0.1:${PORT}`),
-          ensure: url => ensureChrome({ port: PORT, profileDir: join(dir, "chrome-profile"), url })
-        });
+    const chrome = createChrome({ profileDir: join(dir, "chrome-profile"), launch: (profile, opts) => chromium.launchPersistentContext(profile, opts) });
+    app.on("before-quit", () => { chrome.close(); });
+    const zimbra = process.env.DD_TEST ? createFakeZimbra(dir) : createZimbra({ getContext: () => chrome.context() });
     const scheduler = createScheduler({
       store,
       prepare: it => zimbra.prepareMessage({ url: store.read("settings").zimbra.url, to: it.recipient, subject: it.subject || subjectFor(store.read("settings").email.defaultSubject, fromISODate(it.date), store.read("settings").email.dateFormat), body: blocksToText(it.blocks) }),
@@ -56,9 +54,10 @@ else {
     });
     win.removeMenu();
     win.once("ready-to-show", () => win.show());
-    // Keep running (minimised) while digests are scheduled so the timer can fire.
+    // Keep running (minimised) while digests are scheduled so the timer can fire, and while the
+    // Zimbra Chrome window is open, because quitting closes it and would lose an unsent message.
     win.on("close", e => {
-      if (!app.isQuitting && store.read("schedule").some(i => i.status === "scheduled")) { e.preventDefault(); win.minimize(); }
+      if (!app.isQuitting && (chrome.isOpen() || store.read("schedule").some(i => i.status === "scheduled"))) { e.preventDefault(); win.minimize(); }
     });
     win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
     if (process.env.ELECTRON_RENDERER_URL) win.loadURL(process.env.ELECTRON_RENDERER_URL);

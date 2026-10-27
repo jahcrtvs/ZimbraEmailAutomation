@@ -1,6 +1,5 @@
 ﻿import fs from "node:fs";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import { ZimbraError } from "./zimbra.errors.js";
 
 export function findChrome(env = process.env, exists = fs.existsSync) {
@@ -13,18 +12,32 @@ export function findChrome(env = process.env, exists = fs.existsSync) {
   return null;
 }
 
-export async function isDebugPortUp(port, fetchImpl = fetch) {
-  try { return (await fetchImpl(`http://127.0.0.1:${port}/json/version`)).ok; } catch { return false; }
-}
-
-export async function ensureChrome({ port, profileDir, url, spawnImpl = spawn, find = findChrome, isUp = isDebugPortUp, wait = ms => new Promise(r => setTimeout(r, ms)), timeoutMs = 15000 }) {
-  if (await isUp(port)) return;
-  const exe = find();
-  if (!exe) throw new ZimbraError("NO_CHROME", "Google Chrome was not found on this computer.");
-  spawnImpl(exe, [`--remote-debugging-port=${port}`, `--user-data-dir=${profileDir}`, "--no-first-run", url], { detached: true, stdio: "ignore" }).unref();
-  for (let waited = 0; waited < timeoutMs; waited += 500) {
-    await wait(500);
-    if (await isUp(port)) return;
+// Chrome is driven over a pipe, never a debugging port, so no other program on this computer
+// can attach to the signed-in Zimbra session. The Chrome window closes when the app quits.
+export function createChrome({ profileDir, launch, find = findChrome }) {
+  let pending = null;
+  async function start() {
+    const exe = find();
+    if (!exe) throw new ZimbraError("NO_CHROME", "Google Chrome was not found on this computer.");
+    let ctx;
+    try {
+      ctx = await launch(profileDir, { executablePath: exe, headless: false, viewport: null, args: ["--no-first-run"], ignoreDefaultArgs: ["--enable-automation"] });
+    } catch (e) {
+      throw new ZimbraError("UNREACHABLE", "Could not start Chrome. If a Chrome window opened by Daily Digest is still open, close it and retry. " + String(e.message || e).split("\n")[0]);
+    }
+    ctx.on("close", () => { pending = null; });
+    return ctx;
   }
-  throw new ZimbraError("UNREACHABLE", "Chrome did not open its debugging port.");
+  return {
+    context() {
+      if (!pending) pending = start().catch(e => { pending = null; throw e; });
+      return pending;
+    },
+    isOpen: () => pending !== null,
+    async close() {
+      const p = pending;
+      pending = null;
+      if (p) await p.then(c => c.close(), () => {}).catch(() => {});
+    }
+  };
 }

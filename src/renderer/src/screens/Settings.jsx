@@ -51,8 +51,8 @@ export function SettingsScreen({s,a}){
             <Input label="Server address" value={p.lurl} onChange={set("lurl")} helper={"Default "+DEFAULT_LOCAL.baseUrl} error={tried&&!validUrl(p.lurl)?"Enter a valid http(s) address.":undefined}/>
             <Input label="Model" value={p.lmodel} onChange={set("lmodel")} helper={"Default "+DEFAULT_LOCAL.model} error={tried&&!p.lmodel.trim()?"Enter a model name.":undefined}/>
           </div>
-          {validUrl(p.lurl)&&!isLoopbackUrl(p.lurl)&&<Banner tone="warning" title="This address is not on this computer.">Your notes are sent to that server exactly as written.</Banner>}
-          {isCloudModel(p.lmodel)&&<Banner tone="warning" title="This is a cloud model.">Ollama models whose name ends in -cloud or :cloud run on Ollama's servers, not on this computer.</Banner>}
+          {validUrl(p.lurl)&&!isLoopbackUrl(p.lurl)&&<Banner tone="warning" title="This address is not on this computer.">Your notes are sent to that server with emails, links, names and the words you hide replaced, the same as for a cloud service. Past reports are never sent there.</Banner>}
+          {isCloudModel(p.lmodel)&&<Banner tone="warning" title="This is a cloud model.">Ollama models whose name ends in -cloud or :cloud run on Ollama's servers, not on this computer. Your notes are sent with emails, links, names and the words you hide replaced.</Banner>}
           {ls&&ls.state==="no-server"&&<Banner tone="warning" title="Local AI is not running.">{ls.detail}</Banner>}
           {ls&&ls.state==="no-model"&&<Banner tone="warning" title="Model not installed.">Run this in a terminal, then check again: <code>{ls.command||pullCommand(p.lmodel)}</code></Banner>}
           <div><Button variant="outline" loading={s.checkingLocal} onClick={check}>Save and check</Button></div>

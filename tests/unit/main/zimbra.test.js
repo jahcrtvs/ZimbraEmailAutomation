@@ -27,12 +27,12 @@ function fakeBrowser({ loggedIn = true, hasPage = false, htmlBody = false, toSho
     locator, frameLocator: () => ({ locator })
   };
   const ctx = { pages: () => (hasPage ? [page] : []), newPage: async () => page };
-  return { log, browser: { contexts: () => [ctx], newContext: async () => ctx } };
+  return { log, ctx };
 }
 
 describe("zimbra", () => {
   it("exposes exactly checkSession, prepareMessage, openPage", () => {
-    const z = createZimbra({ connect: async () => fakeBrowser().browser, ensure: async () => {} });
+    const z = createZimbra({ getContext: async () => fakeBrowser().ctx });
     expect(Object.keys(z).sort()).toEqual(["checkSession", "openPage", "prepareMessage"]);
   });
   it("has no send selector and exactly one click in its source", () => {
@@ -41,8 +41,8 @@ describe("zimbra", () => {
     expect([...src.matchAll(/\.click\(/g)].length).toBe(1);
   });
   it("prepares a message: steps 1,2,3, fills To/Subject/Body, never touches a send control", async () => {
-    const { browser, log } = fakeBrowser();
-    const z = createZimbra({ connect: async () => browser, ensure: async () => {} });
+    const { ctx, log } = fakeBrowser();
+    const z = createZimbra({ getContext: async () => ctx });
     const steps = [];
     await z.prepareMessage({ url: "https://z", to: "a@b.co", subject: "Subj", body: "Body" }, n => steps.push(n));
     expect(steps).toEqual([1, 2, 3]);
@@ -50,43 +50,52 @@ describe("zimbra", () => {
     expect(log.some(e => /send/i.test(JSON.stringify(e)))).toBe(false);
   });
   it("inserts each of several recipients, each committed with ';'", async () => {
-    const { browser, log } = fakeBrowser();
-    const z = createZimbra({ connect: async () => browser, ensure: async () => {} });
+    const { ctx, log } = fakeBrowser();
+    const z = createZimbra({ getContext: async () => ctx });
     await z.prepareMessage({ url: "https://z", to: "a@x.com, b@y.org", subject: "s", body: "b" }, () => {});
     expect(log.filter(e => e[0] === "insert" || e[0] === "press")).toEqual([["insert", "a@x.com"], ["press", ";"], ["insert", "b@y.org"], ["press", ";"]]);
   });
   it("throws COMPOSE naming the recipient Zimbra mangled", async () => {
-    const { browser } = fakeBrowser({ toShows: "llee@77sof.com" });
-    const z = createZimbra({ connect: async () => browser, ensure: async () => {} });
+    const { ctx } = fakeBrowser({ toShows: "llee@77sof.com" });
+    const z = createZimbra({ getContext: async () => ctx });
     await expect(z.prepareMessage({ url: "https://z", to: "llee@77soft.com", subject: "s", body: "b" }, () => {}))
       .rejects.toMatchObject({ code: "COMPOSE", message: expect.stringContaining("llee@77soft.com") });
   });
   it("fills the TinyMCE iframe body when there is no visible plain-text body", async () => {
-    const { browser, log } = fakeBrowser({ htmlBody: true });
-    const z = createZimbra({ connect: async () => browser, ensure: async () => {} });
+    const { ctx, log } = fakeBrowser({ htmlBody: true });
+    const z = createZimbra({ getContext: async () => ctx });
     await z.prepareMessage({ url: "https://z", to: "a@b.co", subject: "s", body: "Body" }, () => {});
     expect(log).toContainEqual(["fill", "frame:" + SELECTORS.bodyInFrame, "Body"]);
     expect(log.some(e => e[0] === "fill" && e[1] === SELECTORS.body)).toBe(false);
   });
   it("throws COMPOSE when the compose fields cannot be filled", async () => {
-    const { browser } = fakeBrowser();
-    const b = { ...browser, contexts: () => [{ pages: () => [], newPage: async () => { const p = await browser.contexts()[0].newPage(); return { ...p, locator: s => ({ ...p.locator(s), fill: async () => { throw new Error("timeout"); } }) }; } }] };
-    const z = createZimbra({ connect: async () => b, ensure: async () => {} });
+    const { ctx } = fakeBrowser();
+    const b = { pages: () => [], newPage: async () => { const p = await ctx.newPage(); return { ...p, locator: s => ({ ...p.locator(s), fill: async () => { throw new Error("timeout"); } }) }; } };
+    const z = createZimbra({ getContext: async () => b });
     await expect(z.prepareMessage({ url: "https://z", to: "a", subject: "s", body: "b" }, () => {})).rejects.toMatchObject({ code: "COMPOSE" });
   });
   it("throws LOGIN when the login form is showing, before touching compose", async () => {
-    const { browser, log } = fakeBrowser({ loggedIn: false });
-    const z = createZimbra({ connect: async () => browser, ensure: async () => {} });
+    const { ctx, log } = fakeBrowser({ loggedIn: false });
+    const z = createZimbra({ getContext: async () => ctx });
     await expect(z.prepareMessage({ url: "https://z", to: "a@b.co", subject: "s", body: "b" }, () => {})).rejects.toMatchObject({ code: "LOGIN" });
     expect(log.some(e => e[0] === "fill")).toBe(false);
   });
   it("checkSession reports login / connected / unreachable", async () => {
-    expect(await createZimbra({ connect: async () => fakeBrowser({ loggedIn: false }).browser, ensure: async () => {} }).checkSession("https://z")).toBe("login");
-    expect(await createZimbra({ connect: async () => fakeBrowser().browser, ensure: async () => {} }).checkSession("https://z")).toBe("connected");
-    await expect(createZimbra({ connect: async () => { throw new Error("ECONNREFUSED"); }, ensure: async () => {} }).checkSession("https://z")).rejects.toMatchObject({ code: "UNREACHABLE" });
+    expect(await createZimbra({ getContext: async () => fakeBrowser({ loggedIn: false }).ctx }).checkSession("https://z")).toBe("login");
+    expect(await createZimbra({ getContext: async () => fakeBrowser().ctx }).checkSession("https://z")).toBe("connected");
+    await expect(createZimbra({ getContext: async () => { throw new Error("ECONNREFUSED"); } }).checkSession("https://z")).rejects.toMatchObject({ code: "UNREACHABLE" });
   });
-  it("propagates ensure() errors (no Chrome)", async () => {
-    const z = createZimbra({ connect: async () => fakeBrowser().browser, ensure: async () => { throw new ZimbraError("NO_CHROME", "x"); } });
+  it("propagates Chrome launch errors (no Chrome)", async () => {
+    const z = createZimbra({ getContext: async () => { throw new ZimbraError("NO_CHROME", "x"); } });
     await expect(z.checkSession("https://z")).rejects.toMatchObject({ code: "NO_CHROME" });
+  });
+  it("opens Zimbra in the blank tab of a freshly started Chrome", async () => {
+    const { ctx, log } = fakeBrowser();
+    let opened = 0;
+    const blank = { url: () => "about:blank", goto: async u => log.push(["blank-goto", u]), bringToFront: async () => {} };
+    const z = createZimbra({ getContext: async () => ({ pages: () => [blank], newPage: async () => { opened++; return ctx.newPage(); } }) });
+    await z.openPage("https://z");
+    expect(log).toContainEqual(["blank-goto", "https://z"]);
+    expect(opened).toBe(0);
   });
 });

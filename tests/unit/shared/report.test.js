@@ -16,6 +16,29 @@ describe("polish", () => {
     expect(polish("   ", "tasks")).toBeNull();
     expect(polish("• ", "tasks")).toBeNull();
   });
+  it("keeps a note's own verb instead of adding a lead-in", () => {
+    expect(polish("- completed all of the exercises and submitted it on time", "tasks")).toBe("Completed all of the exercises and submitted it on time.");
+    expect(polish("started the aws skill builder lessons", "tasks")).toBe("Started the AWS skill builder lessons.");
+    expect(polish("- Complete the given exercises on monday", "plans")).toBe("Complete the given exercises on Monday.");
+    expect(polish("Do the review lesson for aws", "plans")).toBe("Do the review lesson for AWS.");
+    expect(polish("continue studying spring", "plans")).toBe("Continue studying Spring.");
+    expect(polish("learning docker", "topics")).toBe("Learned Docker.");
+  });
+  it("puts a verb in the tense its section needs", () => {
+    expect(polish("testing login page", "tasks")).toBe("Tested login page.");
+    expect(polish("deploy the app", "tasks")).toBe("Deployed the app.");
+    expect(polish("finished the report", "plans")).toBe("Finish the report.");
+    expect(polish("fix login bug", "progress")).toBe("Fixing login bug.");
+    expect(polish("studying spring", "topics")).toBe("Studied Spring.");
+  });
+  it("adds the lead-in when the first word is not a verb, or is a noun as well", () => {
+    expect(polish("review of pull request", "tasks")).toBe("Worked on review of pull request.");
+    expect(polish("hibernate lesson", "plans")).toBe("Continue work on Hibernate lesson.");
+    expect(polish("test driven development", "topics")).toBe("Studied test driven development.");
+  });
+  it("words a blocker as written, with no lead-in", () => {
+    expect(polish("waiting for db access", "blockers")).toBe("Waiting for db access.");
+  });
   it("does not double punctuation", () => {
     expect(polish("fixed the bug!", "tasks")).toBe("Fixed the bug!");
   });
@@ -32,6 +55,10 @@ describe("render with the handoff example", () => {
       { type: "text", text: "Ann Reyes" },
       { type: "text", text: "Trainee" }
     ]);
+  });
+  it("words Still Working On notes without a stacked lead-in", () => {
+    const v = buildVars({ ...EMPTY_NOTES, progress: "fixing login bug\nembedded id mapping\ncontinued office repo" }, user, date);
+    expect(v.tasks).toEqual(["Still working on: fixing login bug.", "Still working on: embedded ID mapping.", "Continuing work on the Office repo."]);
   });
   it("omits empty sections (no BLOCKERS)", () => {
     expect(blocks.some(b => b.title === "BLOCKERS")).toBe(false);

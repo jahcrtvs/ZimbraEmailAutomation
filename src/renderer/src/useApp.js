@@ -95,8 +95,9 @@ export function useApp() {
     fillSample:() => up({ notes: { ...SAMPLE_NOTES }, digestStatus: "draft" }),
     generate: () => a.run("auto"),
     cloudSend: () => a.run("cloud"),
-    cloudDecline: () => a.run("template"),
-    async run(mode) {
+    // Keep why the local AI failed: "you chose not to send" alone hides what needs fixing.
+    cloudDecline: () => a.run("template", ref.current.cloudAsk?.failure?.message),
+    async run(mode, why) {
       const c = ref.current;
       if (!hasNotes(c.notes)) return;
       clear();
@@ -109,7 +110,7 @@ export function useApp() {
         if (id !== genId.current) return;
         clear();
         if (r.status === "needs-consent") { up({ modal: { t: "cloud" }, cloudAsk: r }); return; }
-        up({ stage: "review", blocks: r.blocks, aiSource: r.source, aiNote: r.note, digestStatus: "ready", savedAt: null, genAt: formatTime(new Date()) });
+        up({ stage: "review", blocks: r.blocks, aiSource: r.source, aiNote: why ? why + " " + r.note : r.note, digestStatus: "ready", savedAt: null, genAt: formatTime(new Date()) });
         if (r.source === "groq" || r.source === "gemini") api().store.load().then(d => up({ audit: d.audit }), () => {});
       } catch (e) {
         if (id !== genId.current) return;

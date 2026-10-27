@@ -9,6 +9,7 @@ import { createScheduler } from "./scheduler.js";
 import { createZimbra } from "./zimbra.js";
 import { createFakeZimbra } from "./zimbra.fake.js";
 import { createChrome } from "./chrome.js";
+import { createOllamaStarter } from "./ollama.js";
 import { registerIpc } from "./ipc.js";
 import { blocksToText, subjectFor } from "../shared/report.js";
 import { fromISODate } from "../shared/time.js";
@@ -28,7 +29,8 @@ else {
       getKey: p => secrets.getKey(p),
       audit: createAudit(store),
       // Tests must never reach a developer's running Ollama or any cloud service.
-      fetchImpl: process.env.DD_TEST ? async () => { throw new Error("network disabled in tests"); } : undefined
+      fetchImpl: process.env.DD_TEST ? async () => { throw new Error("network disabled in tests"); } : undefined,
+      startLocal: process.env.DD_TEST ? undefined : createOllamaStarter()
     });
     const send = (ch, payload) => { if (win && !win.isDestroyed()) win.webContents.send(ch, payload); };
     const chrome = createChrome({ profileDir: join(dir, "chrome-profile"), launch: (profile, opts) => chromium.launchPersistentContext(profile, opts) });

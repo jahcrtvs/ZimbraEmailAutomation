@@ -64,7 +64,7 @@ async function attempt(fetchImpl, local, { system, shots = [], text, counts, max
     });
   } catch (e) {
     if (timedOut(e)) throw fail("TIMEOUT", "The local model took too long to answer.");
-    throw fail("UNREACHABLE", `Could not reach the local AI server at ${local.baseUrl}.`);
+    throw fail("UNREACHABLE", `Could not reach the local AI server at ${local.baseUrl}. Make sure Ollama is installed and running.`);
   }
   if (!res.ok) {
     const raw = await res.text();

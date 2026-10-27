@@ -3,7 +3,7 @@ import { SECTION_KEYS } from "./reply.js";
 import { coversItem, inventsFacts } from "./check.js";
 
 // The kind polish() uses for each reply key.
-const KIND = { tasks: "tasks", topics: "topics", weekly_plans: "plans", blockers: "tasks" };
+const KIND = { tasks: "tasks", topics: "topics", weekly_plans: "plans", blockers: "blockers" };
 
 // Report section titles (default template) -> the reply key that fills them.
 const TITLES = { "TASK TODAY": "tasks", "PLANS FOR THE WEEK": "weekly_plans", "TOPICS": "topics", "BLOCKERS": "blockers" };

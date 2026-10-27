@@ -69,6 +69,20 @@ describe("local first", () => {
     expect(r.blocks[0].items[0]).toBe("Worked on Hibernate.");
     expect(hits("groq.com")).toHaveLength(0);
   });
+  it("starts an installed Ollama that is not running and asks again", async () => {
+    let up = false, started = 0;
+    const g = createGenerator({ getKey: () => null, audit, fetchImpl: route({ local: () => (up ? chat(aligned(two)) : down()) }), startLocal: async () => { started++; up = true; return true; } });
+    const r = await g.generate(payload({ notes: two }));
+    expect(started).toBe(1);
+    expect(r.source).toBe("local");
+    expect(taskItems(r)).toEqual(aligned(two).tasks);
+  });
+  it("does not try to start Ollama for other failures", async () => {
+    let started = 0;
+    const g = createGenerator({ getKey: () => null, audit, fetchImpl: route({ local: () => chat("not json") }), startLocal: async () => { started++; return true; } });
+    await g.generate(payload({ notes: two }));
+    expect(started).toBe(0);
+  });
   it("treats provider none as no fallback even when a key is saved", async () => {
     const r = await gen({ local: down }, { groq: "KEY" }).generate(payload({ ai: aiSettings({ fallback: { provider: "none", auto: true } }) }));
     expect(r.source).toBe("template");

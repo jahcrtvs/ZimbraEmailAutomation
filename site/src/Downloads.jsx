@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, ArrowLeft } from "lucide-react";
+import { Download, ArrowLeft, ChevronDown } from "lucide-react";
 import { DOWNLOAD_URL } from "./config.js";
 
 const LABEL = { feat: "New", fix: "Fix", perf: "Faster", docs: "Docs", refactor: "Change", chore: "Change", other: "Change" };
@@ -8,22 +8,32 @@ const day = iso => new Date(iso).toLocaleDateString("en-US", { year: "numeric", 
 // Release commits ("chore: release vX") are already filtered out, so what is left is user-visible work.
 const label = t => LABEL[t] || "Change";
 
+// The newest version starts open; older ones stay closed so a long change list does not crowd the page.
 function Release({ r, latest }) {
+  const [open, setOpen] = useState(latest);
+  const n = r.changes.length;
   return (
-    <article className="rel" aria-labelledby={"v" + r.version}>
+    <article className="rel">
       <div className="rel-head">
-        <h2 id={"v" + r.version}>Version {r.version}</h2>
+        <h2 className="rel-title">
+          <button type="button" className="rel-toggle" aria-expanded={open} aria-controls={"c" + r.version} onClick={() => setOpen(!open)}>
+            <ChevronDown className="rel-chev" size={20} aria-hidden="true" />
+            <span>Version {r.version}</span>
+          </button>
+        </h2>
         {latest && <span className="rel-tag">Latest</span>}
-        <span className="rel-meta">{day(r.date)} · {mb(r.size)}</span>
+        <span className="rel-meta">{day(r.date)} · {mb(r.size)} · {n ? n + (n === 1 ? " change" : " changes") : "no changes listed"}</span>
         <a className={"btn btn-sm" + (latest ? "" : " btn-ghost")} href={`${DOWNLOAD_URL}?v=${r.version}`}>
           <Download size={16} aria-hidden="true" />Download<span className="visually-hidden"> version {r.version}</span>
         </a>
       </div>
-      {r.changes.length ? (
-        <ul className="rel-changes">
-          {r.changes.map((c, i) => <li key={i}><span className={"chg chg-" + c.type}>{label(c.type)}</span>{c.text}</li>)}
-        </ul>
-      ) : <p className="rel-none">No changes listed for this version.</p>}
+      <div id={"c" + r.version} hidden={!open}>
+        {n ? (
+          <ul className="rel-changes">
+            {r.changes.map((c, i) => <li key={i}><span className={"chg chg-" + c.type}>{label(c.type)}</span>{c.text}</li>)}
+          </ul>
+        ) : <p className="rel-none">No changes listed for this version.</p>}
+      </div>
     </article>
   );
 }

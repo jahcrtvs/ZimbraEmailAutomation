@@ -1,4 +1,5 @@
 import React from "react";
+import logo from "../../../build/icon.png";
 
 export function AppStatus({ s }) {
   const busy = s.stage === "generating", sch = s.digestStatus === "scheduled";
@@ -14,9 +15,10 @@ export function AppStatus({ s }) {
 export function AppShell({ status, children }) {
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column", background: "var(--surface-window)" }}>
-      <div className="app-drag" style={{ height: "var(--titlebar-height)", flexShrink: 0, display: "flex", alignItems: "center", padding: "0 150px 0 14px", background: "var(--surface-titlebar)", borderBottom: "1px solid var(--border-subtle)", position: "relative" }}>
-        <div style={{ position: "absolute", left: 0, right: 0, textAlign: "center", font: "var(--text-app-title)", color: "var(--fg-2)", pointerEvents: "none" }}>Daily Digest</div>
-        <div className="app-nodrag" style={{ marginLeft: "auto", position: "relative" }}>{status}</div>
+      <div className="app-drag" style={{ height: "var(--titlebar-height)", flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "0 150px 0 20px", background: "var(--surface-titlebar)" }}>
+        <img src={logo} alt="" width={22} height={22} style={{ borderRadius: 6 }} />
+        <span style={{ font: "var(--text-app-title)", color: "var(--fg-1)", letterSpacing: "var(--tracking-display)" }}>Daily Digest</span>
+        <div className="app-nodrag" style={{ marginLeft: "auto" }}>{status}</div>
       </div>
       <div style={{ flex: 1, minHeight: 0, display: "flex", position: "relative" }}>{children}</div>
     </div>

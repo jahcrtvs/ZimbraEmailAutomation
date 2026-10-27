@@ -21,5 +21,13 @@
   "1.2.2": [
     { "type": "feat", "text": "Daily Digest now has its own icon in Windows." },
     { "type": "feat", "text": "The setup guide shows where to set recipients and edit the Report template." }
+  ],
+  "1.3.0": [
+    { "type": "feat", "text": "Find out when a new version is available, right in the app." },
+    { "type": "feat", "text": "Turn on a daily alarm in Settings to remind you to write today's Digest." },
+    { "type": "feat", "text": "See updates, alarms, errors and reminders in one Notifications page." },
+    { "type": "feat", "text": "A new look with dot-matrix titles and the app logo." },
+    { "type": "fix", "text": "The app recovers from crashes and shows an error instead of an empty window." },
+    { "type": "fix", "text": "Sent and scheduled status stay correct, and the Digest date is kept with your draft." }
   ]
 }

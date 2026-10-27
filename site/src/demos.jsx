@@ -126,8 +126,8 @@ export function Pairs({ pairs }) {
 // The two send dialogs sit on a horizontal rail; the step buttons and the dialog's own action move along it.
 // Before hydration (or without JavaScript) both dialogs simply stack.
 const STEPS = [
-  { label: "Confirm", src: "/screens/send.png", w: 440, h: 299, alt: "Send dialog listing the recipients and subject, with a Prepare in Zimbra button" },
-  { label: "Ready", src: "/screens/ready.png", w: 440, h: 205, alt: "Confirmation that the email is ready in Zimbra for review" },
+  { label: "Confirm", src: "/screens/send.png", w: 440, h: 298, alt: "Send dialog listing the recipients and subject, with a Prepare in Zimbra button" },
+  { label: "Ready", src: "/screens/ready.png", w: 440, h: 204, alt: "Confirmation that the email is ready in Zimbra for review" },
 ];
 export function ZimbraRail() {
   const live = useMounted();

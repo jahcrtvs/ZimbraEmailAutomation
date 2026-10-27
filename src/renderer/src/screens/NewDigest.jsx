@@ -90,7 +90,9 @@ export function NewDigestScreen({s,a}){
   const subject=subjectFor(s.settings.email.defaultSubject,s.date,s.settings.email.dateFormat);
   const bs=stage==="error"?"failed":stage==="generating"?"generating":st==="prepared"?"sending":locked?st:review?"ready":st==="draft"?"draft":"draft";
   const bl=stage==="error"?"Generation failed":st==="prepared"?"Prepared in Zimbra":stage==="editing"?"Editing":undefined;
-  const ver=stage==="editing"?"Editing":locked?(st==="scheduled"?"Approved version Â· locked":"Read only"):s.savedAt?"Edited Â· Saved "+s.savedAt:"Generated "+s.genAt;
+  // Shown only while the Report on screen is the one saved; an edit or a new generate makes it out of date.
+  const draftSaved=s.draftReport&&s.draftReport.blocks===s.blocks;
+  const ver=stage==="editing"?"Editing":!locked&&draftSaved?"Draft saved "+s.draftReport.at:locked?(st==="scheduled"?"Approved version Â· locked":"Read only"):s.savedAt?"Edited Â· Saved "+s.savedAt:"Generated "+s.genAt;
   return <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
     <PageHeader title={showDoc?"Daily Digest":"New Daily Digest"} meta={fmt(s.date)} right={<StatusBadge status={bs} label={bl} detail={st==="scheduled"&&!bl?s.schedule.time:undefined}/>}/>
     <div style={{flex:1,minHeight:0,display:"grid",gridTemplateColumns:showDoc?"320px minmax(0,1fr)":"minmax(0,1fr) minmax(0,1fr)"}}>
@@ -107,7 +109,8 @@ export function NewDigestScreen({s,a}){
         {review&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 28px",borderTop:"1px solid var(--border-subtle)",background:"var(--surface-window)"}}>
           {stage==="review"?<>
             <Button variant="outline" icon="pencil" onClick={a.startEdit}>Edit</Button>
-            <Button variant="ghost" icon="refresh-cw" onClick={a.regenerate}>Regenerate</Button><div style={{flex:1}}/>
+            <Button variant="ghost" icon="refresh-cw" onClick={a.regenerate}>Regenerate</Button>
+            <Button variant="ghost" icon="save" onClick={a.saveDraft}>Save as Draft</Button><div style={{flex:1}}/>
             <Button variant="outline" icon="send" onClick={a.openSend}>Send Now</Button>
             <Button variant="primary" size="lg" icon="clock" kbd="Ctrl+Shift+S" onClick={()=>a.openSchedule(false)}>Schedule Send</Button>
           </>:<>

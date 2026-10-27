@@ -9,7 +9,8 @@ win:
   target:
     - target: nsis
       arch: [x64]
-  signAndEditExecutable: false
+  # build/icon.png is the app icon; editing the executable is what puts it on Daily Digest.exe and its shortcuts.
+  icon: build/icon.png
 nsis:
   oneClick: false
   perMachine: false

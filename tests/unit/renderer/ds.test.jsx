@@ -28,4 +28,8 @@ describe("design system port", () => {
     rerender(<DS.Button loading>Go</DS.Button>);
     expect(getByRole("button")).toBeDisabled();
   });
+  it("Card does not clip a dropdown that opens past its edge", () => {
+    const { container } = render(<DS.Card title="Email"><DS.Select label="Date format" value="a" options={["a", "b"]} /></DS.Card>);
+    expect(container.firstChild.style.overflow).not.toBe("hidden");
+  });
 });

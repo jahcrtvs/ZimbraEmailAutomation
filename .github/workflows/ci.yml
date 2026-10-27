@@ -1,0 +1,30 @@
+# Runs the unit tests and the e2e smoke on every push and pull request to main.
+# Windows, like the release build, because the app only targets Windows. Both use fakes only.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      # Builds the app, then drives it through Electron with Playwright (no browser download needed).
+      - run: npm run e2e

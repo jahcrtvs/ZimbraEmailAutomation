@@ -10,9 +10,13 @@ import { createZimbra } from "./zimbra.js";
 import { createFakeZimbra } from "./zimbra.fake.js";
 import { createChrome } from "./chrome.js";
 import { createOllamaStarter } from "./ollama.js";
+import { createUpdateChecker } from "./update.js";
 import { registerIpc } from "./ipc.js";
 import { blocksToText, subjectFor } from "../shared/report.js";
 import { fromISODate } from "../shared/time.js";
+
+// The Daily Digest website: /api/version says whether this build is current, /api/download serves the installer.
+const UPDATE_SITE = process.env.DD_UPDATE_SITE || "https://daily-digest-eight-pearl.vercel.app";
 
 if (process.env.DD_USER_DATA) app.setPath("userData", process.env.DD_USER_DATA);
 
@@ -42,7 +46,9 @@ else {
       notify: (title, body) => { if (Notification.isSupported()) new Notification({ title, body }).show(); },
       onChange: items => send("schedule:changed", items)
     });
-    registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, shell, send });
+    // Tests must not depend on the website being reachable; the checker treats a failed request as "up to date".
+    const update = createUpdateChecker({ baseUrl: UPDATE_SITE, version: app.getVersion(), fetchImpl: process.env.DD_TEST ? async () => { throw new Error("network disabled in tests"); } : undefined });
+    registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, shell, send, update });
     // Load the local model now so the first report does not wait for it. Best effort.
     generator.warmUp(store.read("settings").ai.local);
     app.setLoginItemSettings({ openAtLogin: !!store.read("settings").app.startWithWindows && !process.env.DD_TEST });

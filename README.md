@@ -214,6 +214,16 @@ Each command bumps `package.json`, commits `chore: release vX.Y.Z` and tags it. 
 
 The installed app shows its version at the bottom of **Settings**.
 
+### Updates reaching users
+
+On launch, and every 4 hours while open, the app asks the website (`site/api/version.js`) for the newest version and the oldest allowed one:
+
+- **Newer release exists:** a dismissible "Version X is available" banner with a Download button. The newest version is the latest GitHub Release, so publishing a release is all it takes.
+- **Version below the minimum:** a full-screen "Update required" screen replaces the app until the user installs the new version. To force an update, set `MIN_VERSION` (for example `1.3.0`) in the Vercel project settings and redeploy. Leave it unset or `0.0.0` to force nothing.
+- **Check fails (offline, website down):** the app opens normally.
+
+Only versions that contain this check can be forced, so users on 1.2.2 or earlier have to install the first release with it by hand. The website address is `UPDATE_SITE` in `src/main/index.js` (override with `DD_UPDATE_SITE`); change it if the site moves to a custom domain.
+
 ## Status
 
 Known limits:

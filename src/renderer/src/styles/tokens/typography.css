@@ -7,9 +7,9 @@
 --lh-tight:1.1;/* @kind font */--lh-snug:1.3;/* @kind font */--lh-body:1.5;/* @kind font */
 --tracking-display:.04em;--tracking-label:.06em;
 /* semantic — app hierarchy from the brief */
---text-app-title:600 var(--fs-13)/1 var(--font-sans);
---text-page-title:600 var(--fs-20)/var(--lh-snug) var(--font-sans);
---text-section:600 var(--fs-14)/var(--lh-snug) var(--font-sans);
+--text-app-title:400 var(--fs-16)/1 var(--font-display);
+--text-page-title:400 var(--fs-24)/var(--lh-snug) var(--font-display);
+--text-section:400 var(--fs-16)/var(--lh-snug) var(--font-display);
 --text-body:400 var(--fs-14)/var(--lh-body) var(--font-sans);
 --text-meta:400 var(--fs-12)/var(--lh-snug) var(--font-sans);
 --text-helper:400 var(--fs-12)/var(--lh-body) var(--font-sans);

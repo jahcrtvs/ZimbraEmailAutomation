@@ -26,7 +26,7 @@ export function App() {
   return (
     <AppShell status={<AppStatus s={s} />}>
       <AppSidebar items={items} value={s.page} onChange={id => id === "new" ? (a.go("new"), a.newDigest()) : a.go(id)} connected={s.zimbra} onConnectionClick={() => a.setModal({ t: "zstatus" })} />
-      <main style={{ flex: 1, minWidth: 0, display: "flex", minHeight: 0 }}><Screen s={s} a={a} /></main>
+      <main style={{ flex: 1, minWidth: 0, display: "flex", minHeight: 0, margin: "0 10px 10px 0", background: "var(--surface-panel)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}><Screen s={s} a={a} /></main>
       {mt === "schedule" && <ScheduleModal key={s.modal.id || "n"} s={s} a={a} />}
       {mt === "send" && <SendModal s={s} a={a} />}
       {mt === "prepare" && <PrepareModal s={s} a={a} />}

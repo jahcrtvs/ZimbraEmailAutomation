@@ -17,5 +17,5 @@
 --border-subtle:rgba(255,255,255,.08);--border-default:rgba(255,255,255,.16);--border-strong:rgba(255,255,255,.32);--border-accent:var(--orange-500);
 --status-danger:var(--red-500);--status-success:var(--green-500);--status-warning:var(--yellow-500);--status-info:var(--blue-500);
 --tint-accent:rgba(246,162,58,.14);--tint-success:rgba(126,217,87,.14);--tint-danger:rgba(240,74,62,.14);--tint-warning:rgba(245,211,67,.14);--tint-info:rgba(45,140,255,.16);--tint-neutral:rgba(255,255,255,.07);
---overlay-scrim:rgba(0,0,0,.6);--surface-window:var(--ink-1);--surface-sidebar:var(--ink-0);--surface-titlebar:var(--ink-0);--surface-field:var(--ink-2);--surface-document:var(--paper-0);--fg-document:#1b1b1b;--fg-document-muted:#6b6b6b;
+--overlay-scrim:rgba(0,0,0,.6);--surface-window:var(--ink-0);--surface-sidebar:var(--ink-0);--surface-titlebar:var(--ink-0);--surface-panel:var(--ink-1);--surface-card-header:rgba(255,255,255,.025);--surface-field:var(--ink-2);--surface-document:var(--paper-0);--fg-document:#1b1b1b;--fg-document-muted:#6b6b6b;
 }

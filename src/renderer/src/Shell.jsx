@@ -2,7 +2,7 @@ import React from "react";
 import { IconButton } from "./ds";
 
 export function PageHeader({title,meta,right,onBack}){
-  return <div style={{display:"flex",alignItems:"center",gap:12,height:60,padding:"0 28px",borderBottom:"1px solid var(--border-subtle)",flexShrink:0}}>
+  return <div style={{display:"flex",alignItems:"center",gap:12,height:64,padding:"0 28px",flexShrink:0}}>
     {onBack&&<IconButton icon="arrow-left" label="Back" onClick={onBack}/>}
     <h1 style={{margin:0,font:"var(--text-page-title)"}}>{title}</h1>
     {meta&&<span style={{font:"var(--text-meta)",color:"var(--fg-3)"}}>{meta}</span>}

@@ -35,7 +35,7 @@ export function SettingsScreen({s,a}){
   const recent=(s.audit||[]).slice(-5).reverse();
   return <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
     <PageHeader title="Settings" right={<Button variant="primary" kbd="Ctrl+S" onClick={save}>Save</Button>}/>
-    <div style={{flex:1,overflowY:"auto"}}><div style={{maxWidth:720,padding:28,display:"flex",flexDirection:"column",gap:14}}>
+    <div style={{flex:1,overflowY:"auto"}}><div className="settings-cols" style={{padding:"4px 28px 28px",columnWidth:420,columnGap:14}}>
       <Card title="General"><div style={row}><TimePicker label="Default send time" value={p.time} onChange={set("time")}/></div></Card>
       <Card title="Profile" subtitle="Used in the report sign-off"><div style={row}><Input label="Name" value={p.name} onChange={set("name")}/><Input label="Role" value={p.role} onChange={set("role")}/></div></Card>
       <Card title="Email"><div style={row}><Input label="Default recipients" value={p.to} onChange={set("to")} helper="Separate multiple addresses with commas." error={tried&&badTo?"Enter valid email addresses, separated by commas.":undefined}/><Input label="Default subject" value={p.subject} onChange={set("subject")} helper={subjectFor(p.subject,s.today,p.dateFormat)}/><Select label="Date format" value={p.dateFormat} onChange={set("dateFormat")} options={Object.keys(DATE_FORMATS).map(k=>({value:k,label:formatDate(s.today,k)}))}/></div></Card>

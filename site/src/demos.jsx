@@ -27,7 +27,7 @@ export function Nav({ download, donate }) {
   return (
     <header className="nav-wrap">
       <div className="nav container">
-        <a className="mark" href="#top">Daily Digest</a>
+        <a className="mark" href="#top"><img src="/icon.png" alt="" width="28" height="28" />Daily Digest</a>
         <nav aria-label="Sections" ref={links}>
           {SECTIONS.map(([id, label]) => <a key={id} href={"#" + id} aria-current={cur === id ? "true" : undefined}>{label}</a>)}
           <span className="nav-bar" ref={bar} aria-hidden="true" />

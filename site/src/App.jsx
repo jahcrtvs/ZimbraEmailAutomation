@@ -89,21 +89,21 @@ export default function App() {
             <Steps>
               <li style={{ "--i": 0 }}><span>Install <a href="https://www.google.com/chrome/">Google Chrome</a> and <a href="https://ollama.com/download">Ollama</a>.</span></li>
               <li style={{ "--i": 1 }}><span>In a terminal, run <CopyCommand text={`ollama pull ${MODEL}`} /></span></li>
-              <li style={{ "--i": 2 }}><span>Run the installer. If Windows warns you, choose More info, then Run anyway.</span></li>
-              <li style={{ "--i": 3 }}><span>In Settings, add your Zimbra address and sign in once.</span></li>
+              <li style={{ "--i": 2 }}><span>Run the installer and sign in to Zimbra. If Windows warns, pick More info, Run anyway.</span></li>
+              <li style={{ "--i": 3 }}><span>Set recipients, subject and date format in Settings, your report in Templates.</span></li>
             </Steps>
           </div>
         </section>
 
         <section className="faq container" data-nav="setup">
-          <h2>Questions people ask first.</h2>
+          <h2>Common questions.</h2>
           <div className="faq-list">
             <details>
-              <summary>Does it store my Zimbra password?</summary>
+              <summary>Is my Zimbra password stored?</summary>
               <p>No. You sign in inside Chrome, and the app reuses that session.</p>
             </details>
             <details>
-              <summary>Will a scheduled report send itself?</summary>
+              <summary>Do schedules send by themselves?</summary>
               <p>No. A schedule only prepares the email, and a missed one waits for you.</p>
             </details>
             <details>
@@ -126,7 +126,7 @@ export default function App() {
       </main>
 
       <footer className="foot container">
-        <a className="mark" href="#top">Daily Digest</a>
+        <a className="mark" href="#top"><img src="/icon.png" alt="" width="24" height="24" />Daily Digest</a>
         <span>Developed by Jah Dela Cruz</span>
         <span>Version {VERSION}</span>
         <a href="#setup">Setup</a>

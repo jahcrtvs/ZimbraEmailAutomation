@@ -1,7 +1,9 @@
 import { dueAt, isValidRecipients } from "../shared/time.js";
 
 export function createScheduler({ store, now = () => new Date(), prepare, notify = () => {}, onChange = () => {}, intervalMs = 30000 }) {
-  let busy = false, timer = null;
+  let busy = false, timer = null, warned = false;
+  // Prepared in Zimbra but the new status could not be saved: never prepare these again, keep trying to save.
+  const unsaved = new Set();
   const commit = fn => { const items = store.update("schedule", fn); onChange(items); return items; };
 
   const setStatus = (id, status) => commit(items => items.map(i => i.id === id ? { ...i, status } : i));
@@ -27,17 +29,28 @@ export function createScheduler({ store, now = () => new Date(), prepare, notify
     try {
       for (const it of store.read("schedule")) {
         if (it.status !== "scheduled") continue;
+        if (unsaved.has(it.id)) {
+          try { setStatus(it.id, "prepared"); unsaved.delete(it.id); } catch { /* try again next tick */ }
+          continue;
+        }
         const due = dueAt(it.date, it.time);
         if (!due || due > now()) continue;
+        let prepared = false;
         try {
           await prepare(it);
+          prepared = true;
           setStatus(it.id, "prepared");
           notify("Email prepared in Zimbra", "Review it in Zimbra and press Send.");
         } catch {
-          setStatus(it.id, "missed");
-          notify("Scheduled digest was not prepared", "No email was sent.");
+          // A failed save after a good prepare must not report "No email was sent".
+          if (prepared) { unsaved.add(it.id); notify("Email prepared in Zimbra", "Review it in Zimbra and press Send. Daily Digest could not save this, so it may still show as scheduled."); }
+          else { setStatus(it.id, "missed"); notify("Scheduled digest was not prepared", "No email was sent."); }
         }
       }
+      warned = false;
+    } catch {
+      // Runs from a timer, so a failure here would otherwise go unseen. Tell the user once until it works again.
+      if (!warned) { warned = true; notify("Scheduled digests could not be checked", "Daily Digest will keep trying. Open Scheduled to check them."); }
     } finally { busy = false; }
   }
   return {

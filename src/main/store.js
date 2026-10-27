@@ -20,7 +20,8 @@ export const DEFAULTS = () => ({
     ai: { local: { ...DEFAULT_LOCAL }, fallback: { provider: "groq", auto: false }, geminiModel: "flash", privacyTerms: "" },
     app: { startWithWindows: true }
   },
-  draft: { notes: { ...EMPTY_NOTES } }
+  // date is "" for drafts saved before it was kept.
+  draft: { notes: { ...EMPTY_NOTES }, date: "" }
 });
 
 const isObj = v => v && typeof v === "object" && !Array.isArray(v);

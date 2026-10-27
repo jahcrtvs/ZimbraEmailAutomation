@@ -60,7 +60,7 @@ export function useApp() {
         schedule: { date: today, time: settings.general.defaultSendTime, to: settings.email.defaultRecipient } }));
       setReady(true);
       maybeShowMissed(d.schedule.map(itemFromDisk));
-      api().zimbra.check(settings.zimbra.url).then(r => up({ zimbra: r === "connected" }), () => up({ zimbra: false }));
+      api().zimbra.check().then(r => up({ zimbra: r === "connected" }), () => up({ zimbra: false }));
     }).catch(e => setBootError(String(e?.message || e)));
     off = api().schedule.onChanged(applyItems);
     offStep = api().zimbra.onStep(n => up({ prepStep: n }));
@@ -88,7 +88,7 @@ export function useApp() {
     clear();
     up({ modal: { t: "prepare" }, prepStep: 0 });
     try {
-      await api().zimbra.prepare({ url: ref.current.settings.zimbra.url, to, subject: subj, body: blocksToText(blocks) });
+      await api().zimbra.prepare({ to, subject: subj, body: blocksToText(blocks) });
       up(p => ({ prepStep: 3, zimbra: true, digestStatus: forCur ? "prepared" : p.digestStatus }));
       toast("Email prepared in Zimbra.");
       return true;
@@ -161,26 +161,28 @@ export function useApp() {
     openSend: () => up({ modal: { t: "send" } }),
     async confirmSend() {
       const c = ref.current;
-      if (!c.zimbra) { try { const r = await api().zimbra.check(c.settings.zimbra.url); up({ zimbra: r === "connected" }); if (r !== "connected") { up({ modal: { t: "login" } }); return; } } catch (e) { up({ modal: { t: "zerr" }, modalDetails: e.message, modalCode: e.code }); return; } }
+      if (!c.zimbra) { try { const r = await api().zimbra.check(); up({ zimbra: r === "connected" }); if (r !== "connected") { up({ modal: { t: "login" } }); return; } } catch (e) { up({ modal: { t: "zerr" }, modalDetails: e.message, modalCode: e.code }); return; } }
       await runPrepare({ to: c.schedule.to, subj: subject(c), blocks: c.blocks, forCur: true });
     },
-    async loginZimbra() { up({ modal: null }); toast("Opening Zimbra in your browser…", "info"); try { await api().zimbra.open(ref.current.settings.zimbra.url); } catch (e) { up({ modal: { t: "zerr" }, modalDetails: e.message, modalCode: e.code }); } },
-    async retryZimbra() { up({ modal: null, testing: true }); try { const r = await api().zimbra.check(ref.current.settings.zimbra.url); up({ testing: false, zimbra: r === "connected", modal: { t: "send" } }); } catch (e) { up({ testing: false, modal: { t: "zerr" }, modalDetails: e.message, modalCode: e.code }); } },
+    async loginZimbra() { up({ modal: null }); toast("Opening Zimbra in your browser…", "info"); try { await api().zimbra.open(); } catch (e) { up({ modal: { t: "zerr" }, modalDetails: e.message, modalCode: e.code }); } },
+    async retryZimbra() { up({ modal: null, testing: true }); try { const r = await api().zimbra.check(); up({ testing: false, zimbra: r === "connected", modal: { t: "send" } }); } catch (e) { up({ testing: false, modal: { t: "zerr" }, modalDetails: e.message, modalCode: e.code }); } },
     async testZimbra() {
       up({ testing: true });
-      try { const r = await api().zimbra.check(ref.current.settings.zimbra.url); up({ testing: false, zimbra: r === "connected" }); toast(r === "connected" ? "Zimbra connection OK." : "Zimbra login required.", r === "connected" ? "success" : "warning"); }
+      try { const r = await api().zimbra.check(); up({ testing: false, zimbra: r === "connected" }); toast(r === "connected" ? "Zimbra connection OK." : "Zimbra login required.", r === "connected" ? "success" : "warning"); }
       catch (e) { up({ testing: false, zimbra: false }); toast("Unable to connect to Zimbra.", "danger"); }
     },
-    async openZimbra() { toast("Opening Zimbra in your browser…", "info"); try { await api().zimbra.open(ref.current.settings.zimbra.url); } catch (e) { toast("Unable to open Zimbra.", "danger"); } },
+    async openZimbra() { toast("Opening Zimbra in your browser…", "info"); try { await api().zimbra.open(); } catch (e) { toast("Unable to open Zimbra.", "danger"); } },
     setModal: modal => up({ modal }), closeModal: () => { up({ modal: null }); },
     clearToast: () => up({ toast: null }),
     dismissUpdate: () => up({ updateDismissed: true }),
     downloadUpdate: () => api().update.download().catch(() => toast("Could not open the download page.", "danger")),
-    markSent() {
+    async markSent() {
       const c = ref.current, time = formatTime(new Date());
       const entry = { id: uid(), date: c.date, dateLabel: fmt(c.date), time, to: c.schedule.to, blocks: c.blocks, notes: c.notes, status: "sent" };
       const history = [entry, ...c.history];
-      api().store.save("history", history.map(historyToDisk)).catch(failed("save this digest to History"));
+      // Show Sent only once it is in History, or a restart would lose it.
+      try { await api().store.save("history", history.map(historyToDisk)); }
+      catch (e) { failed("save this digest to History")(e); return; }
       up({ digestStatus: "sent", sentAt: time, history });
     },
     async prepareMissed(id) {

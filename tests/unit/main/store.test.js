@@ -42,6 +42,12 @@ describe("store", () => {
     expect(s.profile).toEqual({ name: "Ann", role: "" });
     expect(s.email.defaultSubject).toBe("Daily Digest - {date}");
   });
+  it("keeps the draft date, and gives older drafts an empty one", () => {
+    store.write("draft", { notes: { work: "a" }, date: "2026-10-27" });
+    expect(store.read("draft").date).toBe("2026-10-27");
+    store.write("draft", { notes: { work: "a" } });
+    expect(store.read("draft").date).toBe("");
+  });
   it("refuses unknown collections", () => {
     expect(() => store.read("nope")).toThrow(/unknown collection/);
     expect(() => store.write("nope", {})).toThrow(/unknown collection/);

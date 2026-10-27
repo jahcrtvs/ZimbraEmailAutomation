@@ -51,6 +51,38 @@ describe("scheduler", () => {
     expect(store.read("schedule")[0].status).toBe("missed");
     expect(notes[0][1]).toMatch(/No email was sent/);
   });
+  it("never reports a prepared item as missed when saving its status fails", async () => {
+    const s = make(); s.upsert(item());
+    clock = new Date(2026, 9, 8, 17, 1);
+    const update = store.update;
+    store.update = () => { throw new Error("disk full"); };
+    await s.tick();
+    expect(prepared).toEqual(["a"]);
+    expect(store.read("schedule")[0].status).toBe("scheduled");
+    expect(notes).toHaveLength(1);
+    expect(notes[0][0]).toMatch(/prepared in Zimbra/i);
+    expect(notes[0][1]).not.toMatch(/No email was sent/);
+    await s.tick();
+    expect(prepared).toEqual(["a"]);
+    store.update = update;
+    await s.tick();
+    expect(prepared).toEqual(["a"]);
+    expect(store.read("schedule")[0].status).toBe("prepared");
+  });
+  it("tells the user once when the schedule cannot be checked, and again after it recovers", async () => {
+    const s = make();
+    const read = store.read;
+    store.read = () => { throw new Error("locked"); };
+    await s.tick(); await s.tick();
+    expect(notes).toEqual([["Scheduled digests could not be checked", expect.stringMatching(/keep trying/)]]);
+    store.read = read;
+    await s.tick();
+    store.read = () => { throw new Error("locked"); };
+    await s.tick();
+    expect(notes).toHaveLength(2);
+    store.read = read;
+    await expect(s.tick()).resolves.toBeUndefined();
+  });
   it("marks overdue items missed on launch without preparing", async () => {
     const s = make(); s.upsert(item({ date: "2026-10-07" }));
     clock = new Date(2026, 9, 8, 9, 0);

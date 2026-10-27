@@ -5,13 +5,12 @@ import { DOWNLOAD_URL } from "./config.js";
 const LABEL = { feat: "New", fix: "Fix", perf: "Faster", docs: "Docs", refactor: "Change", chore: "Change", other: "Change" };
 const mb = n => Math.round(n / 1048576) + " MB";
 const day = iso => new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-// Release commits ("chore: release vX") are already filtered out, so what is left is user-visible work.
 const label = t => LABEL[t] || "Change";
 
 // The newest version starts open; older ones stay closed so a long change list does not crowd the page.
 function Release({ r, latest }) {
   const [open, setOpen] = useState(latest);
-  const n = r.changes.length;
+  const n = r.changes.length + (r.more || 0);
   return (
     <article className="rel">
       <div className="rel-head">
@@ -22,17 +21,20 @@ function Release({ r, latest }) {
           </button>
         </h2>
         {latest && <span className="rel-tag">Latest</span>}
-        <span className="rel-meta">{day(r.date)} · {mb(r.size)} · {n ? n + (n === 1 ? " change" : " changes") : "no changes listed"}</span>
-        <a className={"btn btn-sm" + (latest ? "" : " btn-ghost")} href={`${DOWNLOAD_URL}?v=${r.version}`}>
+        <span className="rel-meta">{day(r.date)} · {mb(r.size)} · {n ? n + (n === 1 ? " change" : " changes") : "no user-facing changes"}</span>
+        {latest && <a className="btn btn-sm" href={DOWNLOAD_URL}>
           <Download size={16} aria-hidden="true" />Download<span className="visually-hidden"> version {r.version}</span>
-        </a>
+        </a>}
       </div>
       <div id={"c" + r.version} hidden={!open}>
         {n ? (
-          <ul className="rel-changes">
-            {r.changes.map((c, i) => <li key={i}><span className={"chg chg-" + c.type}>{label(c.type)}</span>{c.text}</li>)}
-          </ul>
-        ) : <p className="rel-none">No changes listed for this version.</p>}
+          <>
+            <ul className="rel-changes">
+              {r.changes.map((c, i) => <li key={i}><span className={"chg chg-" + c.type}>{label(c.type)}</span>{c.text}</li>)}
+            </ul>
+            {r.more > 0 && <p className="rel-none">and {r.more} more</p>}
+          </>
+        ) : <p className="rel-none">No user-facing changes in this version.</p>}
       </div>
     </article>
   );
@@ -61,7 +63,7 @@ export default function Downloads() {
       </header>
       <main id="main" className="container dl">
         <h1>Downloads</h1>
-        <p className="lead dl-lead">Every version of Daily Digest for Windows, newest first, with what changed in each.</p>
+        <p className="lead dl-lead">Every version of Daily Digest for Windows, newest first, with what changed in each. Linux and Mac support is coming soon; please wait for an official download.</p>
         {state.status === "loading" && <p className="dl-state" role="status">Loading versions…</p>}
         {state.status === "error" && <p className="dl-state" role="alert">{state.message} <a href="/api/download">Download the latest version</a> instead.</p>}
         {state.status === "ok" && !state.releases.length && <p className="dl-state">No versions are published yet.</p>}

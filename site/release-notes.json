@@ -1,0 +1,25 @@
+{
+  "1.1.0": [
+    { "type": "feat", "text": "Turn rough notes into a formal daily Report." },
+    { "type": "feat", "text": "Schedule a Digest for later." },
+    { "type": "feat", "text": "Review past Digests and edit the Report template." },
+    { "type": "feat", "text": "Prepare a Zimbra message for multiple recipients; you send it yourself." },
+    { "type": "fix", "text": "Zimbra recipient addresses no longer lose characters." }
+  ],
+  "1.1.1": [],
+  "1.2.0": [
+    { "type": "feat", "text": "Use Local AI to turn Items into Report sentences." },
+    { "type": "feat", "text": "Choose a Cloud fallback when Local AI cannot finish." },
+    { "type": "feat", "text": "See sentences appear as they are written." },
+    { "type": "feat", "text": "Use past sent Reports as wording examples for Local AI." },
+    { "type": "fix", "text": "Past Reports stay on this computer." }
+  ],
+  "1.2.1": [
+    { "type": "feat", "text": "The company Zimbra address is filled in by default." },
+    { "type": "feat", "text": "Download Daily Digest from its new website." }
+  ],
+  "1.2.2": [
+    { "type": "feat", "text": "Daily Digest now has its own icon in Windows." },
+    { "type": "feat", "text": "The setup guide shows where to set recipients and edit the Report template." }
+  ]
+}

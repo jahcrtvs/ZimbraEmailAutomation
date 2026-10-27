@@ -212,6 +212,8 @@ git push --follow-tags
 
 Each command bumps `package.json`, commits `chore: release vX.Y.Z` and tags it. Pushing the tag runs the GitHub Actions workflow in `.github/workflows/release.yml`, which runs the tests, builds the Windows installer, and publishes a GitHub Release. The release notes list the commit messages since the previous version, so write clear commit messages.
 
+For each release, add short user-facing lines to `site/release-notes.json` for the downloads page. Write `feat:` and `fix:` commit subjects for users; they are used when a version has no curated notes.
+
 The installed app shows its version at the bottom of **Settings**.
 
 ### Updates reaching users

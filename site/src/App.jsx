@@ -16,7 +16,7 @@ function DownloadButton() {
   return (
     <div className="get">
       <a className="btn" href={DOWNLOADS_PAGE}><Download size={18} aria-hidden="true" />Download for Windows</a>
-      <p className="get-note">Free, version {VERSION} for Windows 10 and 11, {SIZE}</p>
+      <p className="get-note">Free, version {VERSION} for Windows 10 and 11, {SIZE}. Linux and Mac support is coming soon.</p>
     </div>
   );
 }
@@ -107,8 +107,8 @@ export default function App() {
               <p>No. A schedule only prepares the email, and a missed one waits for you.</p>
             </details>
             <details>
-              <summary>Does it work on a Mac?</summary>
-              <p>Not yet. It needs Windows 10 or 11 with Chrome installed.</p>
+              <summary>Does it work on Linux or Mac?</summary>
+              <p>Not yet. Linux and Mac support is coming soon. For now, it needs Windows 10 or 11 with Chrome installed.</p>
             </details>
           </div>
         </section>

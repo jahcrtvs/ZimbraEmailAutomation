@@ -164,6 +164,11 @@ main > section { padding-block: var(--section-gap-s); }
 .close-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-2xl); align-items: center; }
 .close-grid > div { display: grid; gap: var(--space-xl); }
 .close-grid .shot { width: 100%; }
+.support { display: grid; justify-items: start; gap: var(--space-sm); padding-top: var(--space-lg); border-top: var(--rule-hair) solid var(--color-rule); }
+.support p { color: var(--color-ink-2); max-width: 36ch; }
+/* the cup tips, like taking a sip */
+.btn-coffee:hover svg { animation: sip var(--dur-long) var(--ease-out); }
+@keyframes sip { 40% { transform: rotate(-14deg) translateY(-2px); } }
 
 .foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-lg); padding-block: var(--space-xl); font-size: var(--text-sm); color: var(--color-muted); }
 .foot .mark { font-size: var(--text-md); margin-inline-end: auto; }

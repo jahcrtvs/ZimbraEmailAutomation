@@ -1,5 +1,5 @@
-import { Download, Laptop, ShieldCheck, Lock, KeyRound } from "lucide-react";
-import { VERSION, SIZE, DOWNLOAD_URL, MODEL } from "./config.js";
+import { Download, Laptop, ShieldCheck, Lock, KeyRound, Coffee } from "lucide-react";
+import { VERSION, SIZE, DOWNLOAD_URL, MODEL, DONATE_URL } from "./config.js";
 import { Nav, HeroArt, Pairs, ZimbraRail, Redact, CopyCommand, Steps } from "./demos.jsx";
 
 const PAIRS = [
@@ -12,7 +12,17 @@ function DownloadButton() {
   return (
     <div className="get">
       <a className="btn" href={DOWNLOAD_URL}><Download size={18} aria-hidden="true" />Download for Windows</a>
-      <p className="get-note">Version {VERSION} for Windows 10 and 11, {SIZE}</p>
+      <p className="get-note">Free, version {VERSION} for Windows 10 and 11, {SIZE}</p>
+    </div>
+  );
+}
+
+function Support() {
+  if (!DONATE_URL) return null;
+  return (
+    <div className="support">
+      <p>Daily Digest is free. If it saves you time, you can support its development.</p>
+      <a className="btn btn-ghost btn-coffee" href={DONATE_URL} target="_blank" rel="noopener noreferrer"><Coffee size={18} aria-hidden="true" />Buy me a coffee</a>
     </div>
   );
 }
@@ -104,6 +114,7 @@ export default function App() {
             <div>
               <h2>Write today’s report in a minute.</h2>
               <DownloadButton />
+              <Support />
             </div>
             <Shot src="/screens/notes.png" alt="Daily Digest with rough notes typed under Today's Work, Blockers and Tomorrow" w="1440" h="900" />
           </div>
@@ -116,6 +127,7 @@ export default function App() {
         <span>Version {VERSION}</span>
         <a href="#setup">Setup</a>
         <a href="#privacy">Privacy</a>
+        {DONATE_URL && <a href={DONATE_URL} target="_blank" rel="noopener noreferrer">Buy me a coffee</a>}
       </footer>
     </>
   );

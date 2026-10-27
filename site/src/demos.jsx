@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Copy, Check, MailCheck, Laptop } from "lucide-react";
+import { Copy, Check, MailCheck, Laptop, Coffee } from "lucide-react";
 import { armed, useInView, useLater, useMounted } from "./motion.js";
 
 const SECTIONS = [["how", "How it works"], ["privacy", "Privacy"], ["setup", "Setup"]];
 
 // Sections carry data-nav; the one crossing the middle of the screen marks its link, and one bar slides under it.
-export function Nav({ download }) {
+export function Nav({ download, donate }) {
   const [cur, setCur] = useState(null);
   const links = useRef(null);
   const bar = useRef(null);
@@ -32,6 +32,11 @@ export function Nav({ download }) {
           {SECTIONS.map(([id, label]) => <a key={id} href={"#" + id} aria-current={cur === id ? "true" : undefined}>{label}</a>)}
           <span className="nav-bar" ref={bar} aria-hidden="true" />
         </nav>
+        {donate && (
+          <a className="btn btn-sm btn-ghost btn-coffee nav-coffee" href={donate} target="_blank" rel="noopener noreferrer">
+            <Coffee size={16} aria-hidden="true" /><span className="nav-coffee-label">Buy me a coffee</span>
+          </a>
+        )}
         <a className="btn btn-sm" href={download}>Download</a>
       </div>
     </header>

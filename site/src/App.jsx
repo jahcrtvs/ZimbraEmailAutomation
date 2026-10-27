@@ -8,6 +8,10 @@ const PAIRS = [
   ["worked on hibernate", "Worked on Hibernate, focusing on the Criteria API for query construction."],
 ];
 
+function CoffeeButton({ className = "" }) {
+  return <a className={"btn btn-ghost btn-coffee " + className} href={DONATE_URL} target="_blank" rel="noopener noreferrer"><Coffee size={18} aria-hidden="true" />Buy me a coffee</a>;
+}
+
 function DownloadButton() {
   return (
     <div className="get">
@@ -22,7 +26,7 @@ function Support() {
   return (
     <div className="support">
       <p>Daily Digest is free. If it saves you time, you can support its development.</p>
-      <a className="btn btn-ghost btn-coffee" href={DONATE_URL} target="_blank" rel="noopener noreferrer"><Coffee size={18} aria-hidden="true" />Buy me a coffee</a>
+      <CoffeeButton />
     </div>
   );
 }
@@ -35,7 +39,7 @@ export default function App() {
   return (
     <>
       <a className="skip" href="#main">Skip to content</a>
-      <Nav download={DOWNLOAD_URL} />
+      <Nav download={DOWNLOAD_URL} donate={DONATE_URL} />
 
       <main id="main">
         <section className="hero" id="top" data-nav="">

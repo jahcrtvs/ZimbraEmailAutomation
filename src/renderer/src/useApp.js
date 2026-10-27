@@ -12,7 +12,7 @@ const initial = () => ({
   digestStatus: "none", schedule: { date: new Date(), time: "5:00 PM", to: "" }, items: [], modal: null, zimbra: false, toast: null,
   genAt: null, savedAt: null, sentAt: null, history: [], historySel: null, template: DEFAULT_TEMPLATE,
   settings: null, hasKey: { gemini: false, groq: false }, genStep: 0, prepStep: 0, testing: false, testingAI: false, curId: null, genError: null, modalDetails: null, modalCode: null,
-  aiSource: null, aiNote: null, cloudAsk: null, audit: [], localStatus: null, checkingLocal: false, genLines: []
+  update: null, updateDismissed: false, aiSource: null, aiNote: null, cloudAsk: null, audit: [], localStatus: null, checkingLocal: false, genLines: []
 });
 
 export function useApp() {
@@ -64,6 +64,15 @@ export function useApp() {
     offProgress = api().onGenerateProgress?.(p => up(prev => prev.stage === "generating" ? { genLines: [...prev.genLines, p.sentence] } : {})) || (() => {});
     return () => { off(); offStep(); offProgress(); clear(); };
   }, []);
+
+  // ---- update check: on launch, then every few hours while the app stays open
+  React.useEffect(() => {
+    if (!ready || !api().update) return;
+    const run = () => api().update.check().then(u => up({ update: u }), () => {});
+    run();
+    const t = setInterval(run, 4 * 60 * 60 * 1000);
+    return () => clearInterval(t);
+  }, [ready]);
 
   // ---- autosave notes (debounced)
   React.useEffect(() => {
@@ -161,6 +170,8 @@ export function useApp() {
     async openZimbra() { toast("Opening Zimbra in your browser…", "info"); try { await api().zimbra.open(ref.current.settings.zimbra.url); } catch (e) { toast("Unable to open Zimbra.", "danger"); } },
     setModal: modal => up({ modal }), closeModal: () => { up({ modal: null }); },
     clearToast: () => up({ toast: null }),
+    dismissUpdate: () => up({ updateDismissed: true }),
+    downloadUpdate: () => api().update.download().catch(() => toast("Could not open the download page.", "danger")),
     markSent() {
       const c = ref.current, time = formatTime(new Date());
       const entry = { id: uid(), date: c.date, dateLabel: fmt(c.date), time, to: c.schedule.to, blocks: c.blocks, notes: c.notes, status: "sent" };

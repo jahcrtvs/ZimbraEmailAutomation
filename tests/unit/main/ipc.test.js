@@ -5,9 +5,9 @@ import path from "node:path";
 import { createStore } from "../../../src/main/store.js";
 import { registerIpc } from "../../../src/main/ipc.js";
 
-let handlers, sent, deps;
+let handlers, sent, deps, opened;
 beforeEach(() => {
-  handlers = {}; sent = [];
+  handlers = {}; sent = []; opened = [];
   const store = createStore(fs.mkdtempSync(path.join(os.tmpdir(), "dd-ipc-")));
   deps = {
     ipcMain: { handle: (ch, fn) => { handlers[ch] = fn; } },
@@ -16,7 +16,8 @@ beforeEach(() => {
     generator: { generate: async () => ({ status: "ok", source: "local", note: null, blocks: [] }), testConnection: async () => true, localStatus: async () => ({ state: "ready" }) },
     scheduler: { upsert: i => [i], setStatus: () => [] },
     zimbra: { checkSession: async () => "connected", openPage: async () => {}, prepareMessage: async (_p, onStep) => { onStep(1); onStep(2); onStep(3); } },
-    shell: { openExternal: async () => {} }
+    shell: { openExternal: async url => { opened.push(url); } },
+    update: { check: async () => ({ state: "ok" }), downloadUrl: "https://site.test/api/download" }
   };
   registerIpc(deps);
 });
@@ -27,6 +28,11 @@ describe("ipc", () => {
     const r = await call("store:load");
     expect(r.ok).toBe(true);
     expect(Object.keys(r.value).sort()).toEqual(["audit", "draft", "hasKey", "history", "schedule", "settings", "template"]);
+  });
+  it("checks for updates and opens only the checker's download address", async () => {
+    expect(await call("update:check")).toEqual({ ok: true, value: { state: "ok" } });
+    await call("update:download", "https://evil.test");
+    expect(opened).toEqual(["https://site.test/api/download"]);
   });
   it("saves only whitelisted collections (schedule is main-owned)", async () => {
     expect((await call("store:save", "history", [])).ok).toBe(true);

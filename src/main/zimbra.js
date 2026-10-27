@@ -5,16 +5,18 @@ export { ZimbraError };
 
 // Prepare-only: opens a New Message and fills To/Subject/Body. There is deliberately no code
 // here that locates or activates the control that transmits a message.
-export function createZimbra({ connect, ensure, selectors = SELECTORS }) {
+export function createZimbra({ getContext, selectors = SELECTORS }) {
   async function getPage(url) {
-    await ensure(url);
-    let browser;
-    try { browser = await connect(); }
-    catch (e) { throw new ZimbraError("UNREACHABLE", "Unable to connect to Chrome: " + String(e.message || e)); }
-    const ctx = browser.contexts()[0] || (await browser.newContext());
+    let ctx;
+    try { ctx = await getContext(); }
+    catch (e) { throw e instanceof ZimbraError ? e : new ZimbraError("UNREACHABLE", "Unable to connect to Chrome: " + String(e.message || e)); }
     let page = ctx.pages().find(p => p.url().startsWith(url));
-    if (page) await page.bringToFront();
-    else { page = await ctx.newPage(); await page.goto(url, { waitUntil: "domcontentloaded" }); }
+    if (!page) {
+      // A freshly started Chrome has one blank tab: use it rather than leave it lying around.
+      page = ctx.pages().find(p => p.url() === "about:blank") || (await ctx.newPage());
+      await page.goto(url, { waitUntil: "domcontentloaded" });
+    }
+    await page.bringToFront();
     return page;
   }
   async function loggedIn(page) {

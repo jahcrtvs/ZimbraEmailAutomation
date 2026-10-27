@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { polish, lines, buildVars, render, DEFAULT_TEMPLATE, SAMPLE_NOTES, EMPTY_NOTES, subjectFor, blocksToText, hasNotes } from "@shared/report.js";
 
-const user = { name: "Mark Justine Dela Cruz", role: "CDP Trainee" };
+const user = { name: "Ann Reyes", role: "Trainee" };
 const date = new Date(2026, 9, 8);
 
 describe("polish", () => {
@@ -29,8 +29,8 @@ describe("render with the handoff example", () => {
       { type: "section", title: "PLANS FOR THE WEEK", items: ["Continue work on the repository.", "Finish the embedded ID mapping."] },
       { type: "section", title: "TOPICS", items: ["Studied Criteria API projections.", "Studied HQL vs. Criteria."] },
       { type: "text", text: "Regards," },
-      { type: "text", text: "Mark Justine Dela Cruz" },
-      { type: "text", text: "CDP Trainee" }
+      { type: "text", text: "Ann Reyes" },
+      { type: "text", text: "Trainee" }
     ]);
   });
   it("omits empty sections (no BLOCKERS)", () => {
@@ -43,7 +43,11 @@ describe("edge input", () => {
     expect(lines("worked on hibernate\r\nfixed duplicate result\r\n", "tasks")).toEqual(["Worked on Hibernate.", "Fixed duplicate query results."]);
     const blocks = render("TASK TODAY\r\n\r\n{tasks}\r\n\r\nRegards,\r\n{name}", buildVars({ ...EMPTY_NOTES, work: "worked on sql" }, user, date));
     expect(blocks[0].items).toEqual(["Worked on SQL."]);
-    expect(blocks[blocks.length - 1]).toEqual({ type: "text", text: "Mark Justine Dela Cruz" });
+    expect(blocks[blocks.length - 1]).toEqual({ type: "text", text: "Ann Reyes" });
+  });
+  it("leaves no blank line for a name or role not set yet", () => {
+    const b = render("Regards,\n{name}\n{role}", buildVars(EMPTY_NOTES, { name: "", role: "" }, date));
+    expect(b).toEqual([{ type: "text", text: "Regards," }]);
   });
   it("keeps unknown variables as typed and joins arrays inline", () => {
     const b = render("Hi {unknown} {tasks}", buildVars({ ...EMPTY_NOTES, work: "worked on sql" }, user, date));
@@ -60,7 +64,7 @@ describe("subject and email text", () => {
   it("converts blocks to plain text", () => {
     const t = blocksToText(render(DEFAULT_TEMPLATE, buildVars(SAMPLE_NOTES, user, date)));
     expect(t.startsWith("TASK TODAY\n- Worked on Hibernate.\n")).toBe(true);
-    expect(t.endsWith("Regards,\nMark Justine Dela Cruz\nCDP Trainee")).toBe(true);
+    expect(t.endsWith("Regards,\nAnn Reyes\nTrainee")).toBe(true);
     expect(t).toContain("\n\nPLANS FOR THE WEEK\n- Continue work on the repository.");
   });
 });

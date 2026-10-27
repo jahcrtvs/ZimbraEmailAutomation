@@ -13,6 +13,9 @@ describe("store", () => {
     expect(store.read("settings").email.defaultRecipient).toBe("manager@company.com");
     expect(store.read("template").body).toContain("TASK TODAY");
   });
+  it("ships with no one's name in the profile", () => {
+    expect(DEFAULTS().settings.profile).toEqual({ name: "", role: "" });
+  });
   it("writes and reads back, leaving no temp file", () => {
     store.write("history", [{ id: "a" }]);
     expect(store.read("history")).toEqual([{ id: "a" }]);
@@ -36,7 +39,7 @@ describe("store", () => {
   it("fills missing settings keys from defaults", () => {
     fs.writeFileSync(path.join(dir, "settings.json"), JSON.stringify({ profile: { name: "Ann" } }));
     const s = store.read("settings");
-    expect(s.profile).toEqual({ name: "Ann", role: "CDP Trainee" });
+    expect(s.profile).toEqual({ name: "Ann", role: "" });
     expect(s.email.defaultSubject).toBe("Daily Digest - {date}");
   });
   it("refuses unknown collections", () => {

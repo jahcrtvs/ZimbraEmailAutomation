@@ -31,7 +31,7 @@ describe("sanitizeNotes", () => {
     expect(r.map).toEqual([]);
   });
   it("hides the given words as whole words, ignoring case", () => {
-    const r = sanitizeNotes(notes({ work: "Mark asked cruz to bookmark the page" }), { terms: ["Mark Justine Dela Cruz", "Mark", "Cruz", "ab"] });
+    const r = sanitizeNotes(notes({ work: "Mark asked cruz to bookmark the page" }), { terms: ["Mark Anton Cruz", "Mark", "Cruz", "ab"] });
     expect(r.notes.work).toBe("[NAME_1] asked [NAME_2] to bookmark the page");
     expect(restore(r.notes.work, r.map)).toBe("Mark asked cruz to bookmark the page");
   });

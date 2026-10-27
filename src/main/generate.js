@@ -36,7 +36,9 @@ const CLOUD = {
   }
 };
 
-const termsFor = (profile, ai) => [
+const KEEP_PLACEHOLDERS = `- Keep any text in square brackets, such as [EMAIL_1] or [NAME_2], exactly as written.\n`;
+
+const termsFor =(profile, ai) => [
   profile?.name, ...String(profile?.name || "").split(/\s+/), ...String(ai.privacyTerms || "").split(/[,\n]/)
 ].filter(Boolean);
 
@@ -89,14 +91,19 @@ export function createGenerator({ getKey, fetchImpl = fetch, sleep = realSleep, 
         const counts = Object.fromEntries(SECTION_KEYS.map(k => [k, items[k].length]));
         // Past reports are the user's own text: show them only to a model running on this computer.
         const own = isLoopbackUrl(ai.local.baseUrl) && !isCloudModel(ai.local.model);
+        // A server elsewhere gets the notes the way a cloud provider would: sanitised, or not at all.
+        const s = own ? null : sanitizeNotes(notes, { terms: termsFor(profile, ai) });
+        if (s?.blocked) return plain(s.blocked.replace("a cloud service", "the AI server in Settings, which is not on this computer") + " The built-in text rules were used.");
+        const back = t => s ? restore(t, s.map) : t;
         const maxTokens = 80 + SECTION_KEYS.flatMap(k => items[k]).reduce((n, it) => n + 50 + Math.ceil(it.length / 3), 0);
         const { partial, ...raw } = await runLocal({
           fetchImpl, local: ai.local, counts, maxTokens,
-          system: LOCAL_PROMPT,
+          system: s ? LOCAL_PROMPT + KEEP_PLACEHOLDERS : LOCAL_PROMPT,
           shots: exampleExchange(pickExamples({ history: own ? history : [], items })),
-          text: "Notes:\n" + notesText(notes),
-          onSentence: onProgress && ((section, sentence) => onProgress({ section, sentence }))
+          text: "Notes:\n" + notesText(s ? s.notes : notes),
+          onSentence: onProgress && ((section, sentence) => onProgress({ section, sentence: back(sentence) }))
         });
+        for (const k of Object.keys(raw)) raw[k] = raw[k].map(back);
         const { parsed, fallbacks, total } = applyChecks({ items, parsed: raw, builtIn: vars, partial: !!partial });
         if (total && fallbacks === total) return plain("The local AI's sentences could not be used, so the built-in text rules were used.");
         const note = fallbacks ? `${fallbacks} of ${total} sentences use the built-in rules because the local AI left them out or added details your notes did not mention.` : null;

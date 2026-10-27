@@ -87,7 +87,9 @@ export function render(template, vars) {
     if (v && Array.isArray(vars[v[1]])) { if (cur) cur.items.push(...vars[v[1]]); return; }
     if (!/[{}]/.test(l) && l === l.toUpperCase() && /[A-Z]/.test(l)) { cur = { type: "section", title: l, items: [] }; blocks.push(cur); return; }
     cur = null;
-    blocks.push({ type: "text", text: l.replace(/\{(\w+)\}/g, (m, k) => Array.isArray(vars[k]) ? vars[k].join(", ") : (vars[k] ?? m)) });
+    const text = l.replace(/\{(\w+)\}/g, (m, k) => Array.isArray(vars[k]) ? vars[k].join(", ") : (vars[k] ?? m)).trim();
+    // A variable left empty, such as a name not yet set in Settings, leaves no blank line.
+    if (text) blocks.push({ type: "text", text });
   });
   return blocks.filter(b => b.type !== "section" || b.items.length);
 }

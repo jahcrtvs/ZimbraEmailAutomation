@@ -28,7 +28,7 @@ const sse = (...parts) => {
     const x = queue[i++]; if (x instanceof Error) throw x; return { done: false, value: x };
   } }) } };
 };
-const payload = (over = {}) => ({ notes: NOTES, template: DEFAULT_TEMPLATE, profile: { name: "Mark Justine Dela Cruz", role: "CDP Trainee" }, date: "2026-10-08", dateFormat: "long", ai: aiSettings(), ...over });
+const payload = (over = {}) => ({ notes: NOTES, template: DEFAULT_TEMPLATE, profile: { name: "Mark Anton Cruz", role: "CDP Trainee" }, date: "2026-10-08", dateFormat: "long", ai: aiSettings(), ...over });
 
 let calls, entries;
 beforeEach(() => { calls = []; entries = []; });
@@ -144,6 +144,37 @@ describe("local quality", () => {
       expect(bodies[0]).not.toContain("Fixed the login page.");
       expect(bodies[0]).toContain("Notes:");
     }
+  });
+  it("sanitises notes for a server that is not on this computer and restores the sentences", async () => {
+    const notes = { ...two, work: "emailed boss@corp.example\nasked Cruz for review" };
+    for (const lc of [{ baseUrl: "http://192.168.1.5:11434/v1", model: "qwen2.5:3b-instruct" }, { baseUrl: "http://localhost:11434/v1", model: "gpt-oss:20b-cloud" }]) {
+      const bodies = [];
+      const reply = { tasks: [{ note: "emailed [EMAIL_1]", sentence: "Emailed [EMAIL_1] about the review." }, { note: "asked [NAME_1] for review", sentence: "Asked [NAME_1] for a review." }], topics: [], weekly_plans: [], blockers: [] };
+      const g = createGenerator({ getKey: () => null, sleep: async () => {}, audit, fetchImpl: async (_u, init) => { bodies.push(init.body); return chat(reply); } });
+      const r = await g.generate(payload({ notes, ai: aiSettings({ local: lc }) }));
+      expect(bodies).toHaveLength(1);
+      expect(bodies[0]).not.toMatch(/boss@corp\.example|Cruz/);
+      expect(bodies[0]).toContain("[EMAIL_1]");
+      expect(JSON.parse(bodies[0]).messages[0].content).toMatch(/square brackets/);
+      expect(r.source).toBe("local");
+      expect(taskItems(r)).toEqual(["Emailed boss@corp.example about the review.", "Asked Cruz for a review."]);
+    }
+  });
+  it("restores streamed sentences from a server that is not on this computer", async () => {
+    const seen = [];
+    const notes = { ...two, work: "emailed boss@corp.example", progress: "" };
+    const full = JSON.stringify({ tasks: [{ note: "emailed [EMAIL_1]", sentence: "Emailed [EMAIL_1] about the review." }], topics: [], weekly_plans: [], blockers: [] });
+    const g = createGenerator({ getKey: () => null, sleep: async () => {}, audit, fetchImpl: async () => sse(full) });
+    await g.generate(payload({ notes, ai: aiSettings({ local: { baseUrl: "http://192.168.1.5:11434/v1", model: "m" } }), onProgress: p => seen.push(p.sentence) }));
+    expect(seen).toEqual(["Emailed boss@corp.example about the review."]);
+  });
+  it("never sends notes with a secret to a server that is not on this computer", async () => {
+    const bodies = [];
+    const g = createGenerator({ getKey: () => "K", sleep: async () => {}, audit, fetchImpl: async (_u, init) => { bodies.push(init.body); return chat(good); } });
+    const r = await g.generate(payload({ notes: { ...two, work: "tried password: hunter2" }, ai: aiSettings({ local: { baseUrl: "http://192.168.1.5:11434/v1", model: "m" } }) }));
+    expect(bodies).toEqual([]);
+    expect(r.source).toBe("template");
+    expect(r.note).toMatch(/not on this computer/);
   });
   it("sizes the token budget from the length of the notes", async () => {
     await gen({ local: local(aligned(two)) }).generate(payload({ notes: two }));

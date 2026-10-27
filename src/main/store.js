@@ -10,7 +10,7 @@ export const DEFAULTS = () => ({
   template: { id: "daily-digest", name: "Daily Digest", body: DEFAULT_TEMPLATE, variables: [...VARIABLES] },
   settings: {
     general: { defaultSendTime: "5:00 PM" },
-    profile: { name: "Mark Justine Dela Cruz", role: "CDP Trainee" },
+    profile: { name: "", role: "" },
     email: { defaultRecipient: "manager@company.com", defaultSubject: "Daily Digest - {date}", dateFormat: "long" },
     zimbra: { url: "https://mail.company.local" },
     ai: { local: { ...DEFAULT_LOCAL }, fallback: { provider: "groq", auto: false }, geminiModel: "flash", privacyTerms: "" },

@@ -36,5 +36,8 @@
   ],
   "1.4.1": [
     { "type": "fix", "text": "Closing the window now asks whether to keep Daily Digest running or quit, so you can always close the app." }
+  ],
+  "1.4.2": [
+    { "type": "fix", "text": "Long recipient lists and subjects no longer run off the edge of the Send Daily Digest window." }
   ]
 }

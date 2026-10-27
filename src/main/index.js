@@ -81,7 +81,16 @@ else {
     // Keep running (minimised) while digests are scheduled or the alarm is on so the timers can fire, and while the
     // Zimbra Chrome window is open, because quitting closes it and would lose an unsent message.
     win.on("close", e => {
-      if (!app.isQuitting && (chrome.isOpen() || store.read("settings").alarm.enabled || store.read("schedule").some(i => i.status === "scheduled"))) { e.preventDefault(); win.minimize(); }
+      if (!app.isQuitting && (chrome.isOpen() || store.read("settings").alarm.enabled || store.read("schedule").some(i => i.status === "scheduled"))) {
+        e.preventDefault();
+        // Without a way out, the close button looks broken. Tests keep the old minimise.
+        const quit = !process.env.DD_TEST && dialog.showMessageBoxSync(win, {
+          type: "question", title: "Daily Digest", buttons: ["Keep running", "Quit anyway"], defaultId: 0, cancelId: 0,
+          message: "Daily Digest is still needed in the background.",
+          detail: "Scheduled digests, the alarm and the Zimbra Chrome window stop if you quit."
+        }) === 1;
+        if (quit) app.quit(); else win.minimize();
+      }
     });
     win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
     // The window only ever shows the app page; any other page would get window.api.

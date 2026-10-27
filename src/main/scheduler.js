@@ -40,17 +40,17 @@ export function createScheduler({ store, now = () => new Date(), prepare, notify
           await prepare(it);
           prepared = true;
           setStatus(it.id, "prepared");
-          notify("Email prepared in Zimbra", "Review it in Zimbra and press Send.");
+          notify("Email prepared in Zimbra", "Review it in Zimbra and press Send.", "reminder");
         } catch {
           // A failed save after a good prepare must not report "No email was sent".
-          if (prepared) { unsaved.add(it.id); notify("Email prepared in Zimbra", "Review it in Zimbra and press Send. Daily Digest could not save this, so it may still show as scheduled."); }
-          else { setStatus(it.id, "missed"); notify("Scheduled digest was not prepared", "No email was sent."); }
+          if (prepared) { unsaved.add(it.id); notify("Email prepared in Zimbra", "Review it in Zimbra and press Send. Daily Digest could not save this, so it may still show as scheduled.", "reminder"); }
+          else { setStatus(it.id, "missed"); notify("Scheduled digest was not prepared", "No email was sent.", "error"); }
         }
       }
       warned = false;
     } catch {
       // Runs from a timer, so a failure here would otherwise go unseen. Tell the user once until it works again.
-      if (!warned) { warned = true; notify("Scheduled digests could not be checked", "Daily Digest will keep trying. Open Scheduled to check them."); }
+      if (!warned) { warned = true; notify("Scheduled digests could not be checked", "Daily Digest will keep trying. Open Scheduled to check them.", "error"); }
     } finally { busy = false; }
   }
   return {

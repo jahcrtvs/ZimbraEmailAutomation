@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { createStore } from "../../../src/main/store.js";
 import { registerIpc } from "../../../src/main/ipc.js";
+import { createNotifications } from "../../../src/main/notifications.js";
 
 let handlers, sent, deps, opened;
 beforeEach(() => {
@@ -17,7 +18,8 @@ beforeEach(() => {
     scheduler: { upsert: i => [i], setStatus: () => [] },
     zimbra: { checkSession: async () => "connected", openPage: async () => {}, prepareMessage: async (_p, onStep) => { onStep(1); onStep(2); onStep(3); } },
     shell: { openExternal: async url => { opened.push(url); } },
-    update: { check: async () => ({ state: "ok" }), downloadUrl: "https://site.test/api/download" }
+    update: { check: async () => ({ state: "ok" }), downloadUrl: "https://site.test/api/download" },
+    notifications: createNotifications({ store })
   };
   registerIpc(deps);
 });
@@ -27,12 +29,25 @@ describe("ipc", () => {
   it("loads everything plus hasKey", async () => {
     const r = await call("store:load");
     expect(r.ok).toBe(true);
-    expect(Object.keys(r.value).sort()).toEqual(["audit", "draft", "hasKey", "history", "schedule", "settings", "template"]);
+    expect(Object.keys(r.value).sort()).toEqual(["audit", "draft", "hasKey", "history", "notifications", "schedule", "settings", "template"]);
   });
   it("checks for updates and opens only the checker's download address", async () => {
     expect(await call("update:check")).toEqual({ ok: true, value: { state: "ok" } });
     await call("update:download", "https://evil.test");
     expect(opened).toEqual(["https://site.test/api/download"]);
+  });
+  it("lists a new version once in notifications", async () => {
+    deps.update.check = async () => ({ state: "optional", latest: "9.0.0" });
+    await call("update:check"); await call("update:check");
+    expect(deps.store.read("notifications")).toMatchObject([{ kind: "update", title: expect.stringContaining("9.0.0") }]);
+  });
+  it("lets the page add only errors, cut short", async () => {
+    await call("notifications:addError", { title: "x".repeat(500), body: "y" });
+    const [n] = deps.store.read("notifications");
+    expect(n.kind).toBe("error");
+    expect(n.title).toHaveLength(120);
+    expect((await call("notifications:markAllRead")).value[0].read).toBe(true);
+    expect((await call("notifications:clear")).value).toEqual([]);
   });
   it("saves only whitelisted collections (schedule is main-owned)", async () => {
     expect((await call("store:save", "history", [])).ok).toBe(true);

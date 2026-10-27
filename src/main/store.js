@@ -11,9 +11,11 @@ export const DEFAULTS = () => ({
   history: [],
   schedule: [],
   audit: [],
+  notifications: [],
   template: { id: "daily-digest", name: "Daily Digest", body: DEFAULT_TEMPLATE, variables: [...VARIABLES] },
   settings: {
     general: { defaultSendTime: "5:00 PM" },
+    alarm: { enabled: false, time: "4:30 PM" },
     profile: { name: "", role: "" },
     email: { defaultRecipient: "manager@company.com", defaultSubject: "Daily Digest - {date}", dateFormat: "long" },
     zimbra: { url: ZIMBRA_URL },

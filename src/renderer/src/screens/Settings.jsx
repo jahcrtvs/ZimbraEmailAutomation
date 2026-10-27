@@ -7,12 +7,12 @@ import { DEFAULT_LOCAL, PROVIDER_NAMES, isCloudModel, isLoopbackUrl, pullCommand
 const D = () => DS;
 const validUrl = u => { try { return /^https?:$/.test(new URL(u).protocol); } catch { return false; } };
 export function SettingsScreen({s,a}){
-  const {Card,Button,Input,Select,TimePicker,StatusBadge,Banner}=D();
+  const {Card,Button,Input,Select,TimePicker,StatusBadge,Banner,Switch}=D();
   const ai=s.settings.ai;
   const [p,setP]=React.useState({
     name:s.settings.profile.name,role:s.settings.profile.role,
     to:s.settings.email.defaultRecipient,subject:s.settings.email.defaultSubject,dateFormat:s.settings.email.dateFormat,
-    time:s.settings.general.defaultSendTime,url:s.settings.zimbra.url,
+    time:s.settings.general.defaultSendTime,url:s.settings.zimbra.url,alarmOn:s.settings.alarm.enabled,alarmTime:s.settings.alarm.time,
     lurl:ai.local.baseUrl,lmodel:ai.local.model,fb:ai.fallback.provider,fbAuto:ai.fallback.auto?"auto":"ask",gmodel:ai.geminiModel,terms:ai.privacyTerms,apiKey:""});
   const [tried,setTried]=React.useState(false);
   const badTo=!isValidRecipients(p.to),badUrl=!validUrl(p.url),badLocal=!validUrl(p.lurl)||!p.lmodel.trim();
@@ -21,6 +21,7 @@ export function SettingsScreen({s,a}){
     setTried(false);
     const done=a.saveSettings({apiKey:p.apiKey,settings:{...s.settings,
       general:{...s.settings.general,defaultSendTime:p.time},
+      alarm:{enabled:p.alarmOn,time:p.alarmTime},
       profile:{name:p.name,role:p.role},
       email:{defaultRecipient:p.to,defaultSubject:p.subject,dateFormat:p.dateFormat},
       zimbra:{url:p.url},
@@ -37,6 +38,13 @@ export function SettingsScreen({s,a}){
     <PageHeader title="Settings" right={<Button variant="primary" kbd="Ctrl+S" onClick={save}>Save</Button>}/>
     <div style={{flex:1,overflowY:"auto"}}><div className="settings-cols" style={{padding:"4px 28px 28px",columnWidth:420,columnGap:14}}>
       <Card title="General"><div style={row}><TimePicker label="Default send time" value={p.time} onChange={set("time")}/></div></Card>
+      <Card title="Daily alarm" subtitle="A Windows notification on weekdays to write today's digest. Skipped once it is sent or scheduled.">
+        <div style={col}>
+          <Switch label="Remind me" checked={p.alarmOn} onChange={set("alarmOn")}/>
+          {p.alarmOn&&<div style={row}><TimePicker label="Alarm time" value={p.alarmTime} onChange={set("alarmTime")}/></div>}
+          {p.alarmOn&&<p style={{margin:0,font:"var(--text-helper)",color:"var(--fg-3)"}}>Closing the window keeps Daily Digest running, minimised, so the alarm can go off.</p>}
+        </div>
+      </Card>
       <Card title="Profile" subtitle="Used in the report sign-off"><div style={row}><Input label="Name" value={p.name} onChange={set("name")}/><Input label="Role" value={p.role} onChange={set("role")}/></div></Card>
       <Card title="Email"><div style={row}><Input label="Default recipients" value={p.to} onChange={set("to")} helper="Separate multiple addresses with commas." error={tried&&badTo?"Enter valid email addresses, separated by commas.":undefined}/><Input label="Default subject" value={p.subject} onChange={set("subject")} helper={subjectFor(p.subject,s.today,p.dateFormat)}/><Select label="Date format" value={p.dateFormat} onChange={set("dateFormat")} options={Object.keys(DATE_FORMATS).map(k=>({value:k,label:formatDate(s.today,k)}))}/></div></Card>
       <Card title="Zimbra" actions={s.zimbra?<StatusBadge status="sent" label="Connected" size="sm"/>:<StatusBadge status="none" label="Disconnected" size="sm"/>}>

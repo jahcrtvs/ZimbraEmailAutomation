@@ -27,9 +27,9 @@ contextBridge.exposeInMainWorld("api", {
   testAI: provider => call("ai:test", provider),
   setApiKey: (key, provider) => call("ai:setKey", key, provider),
   zimbra: {
-    check: url => call("zimbra:check", url),
+    check: () => call("zimbra:check"),
     prepare: p => call("zimbra:prepare", p),
-    open: url => call("zimbra:open", url),
+    open: () => call("zimbra:open"),
     onStep: on("prepare:step")
   }
 });

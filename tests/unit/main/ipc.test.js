@@ -49,9 +49,30 @@ describe("ipc", () => {
     expect(r.ok).toBe(true);
     expect(sent.filter(([c]) => c === "prepare:step").map(([, n]) => n)).toEqual([1, 2, 3]);
   });
-  it("rejects non-http(s) Zimbra URLs", async () => {
-    expect((await call("zimbra:check", "file:///etc/passwd")).ok).toBe(false);
-    expect((await call("zimbra:prepare", { url: "javascript:alert(1)", to: "a@b.co", subject: "s", body: "b" })).ok).toBe(false);
+  it("uses the saved Zimbra address and ignores any the renderer sends", async () => {
+    const seen = [];
+    deps.zimbra = { checkSession: async u => { seen.push(u); return "connected"; }, openPage: async u => { seen.push(u); }, prepareMessage: async m => { seen.push(m.url); } };
+    registerIpc(deps);
+    await call("zimbra:check", "http://127.0.0.1:9");
+    await call("zimbra:open", "https://evil.test");
+    await call("zimbra:prepare", { url: "https://evil.test", to: "a@b.co", subject: "s", body: "b" });
+    const saved = deps.store.read("settings").zimbra.url;
+    expect(seen).toEqual([saved, saved, saved]);
+  });
+  it("rejects a saved Zimbra address that is not http(s)", async () => {
+    const settings = deps.store.read("settings");
+    deps.store.write("settings", { ...settings, zimbra: { url: "file:///etc/passwd" } });
+    expect((await call("zimbra:check")).ok).toBe(false);
+    expect((await call("zimbra:prepare", { to: "a@b.co", subject: "s", body: "b" })).ok).toBe(false);
+  });
+  it("applies saved settings at once, and only for settings", async () => {
+    const applied = [];
+    deps.onSettingsSaved = s => applied.push(s.app.startWithWindows);
+    registerIpc(deps);
+    const settings = deps.store.read("settings");
+    await call("store:save", "settings", { ...settings, app: { startWithWindows: false } });
+    await call("store:save", "history", []);
+    expect(applied).toEqual([false]);
   });
   it("reports per-provider hasKey booleans only", async () => {
     deps.secrets.hasKey = p => p === "groq";

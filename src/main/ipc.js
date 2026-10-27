@@ -8,13 +8,19 @@ const wrap = fn => async (_e, ...args) => {
 };
 const httpUrl = u => { let p; try { p = new URL(u); } catch { throw new Error("Invalid URL."); } if (!/^https?:$/.test(p.protocol)) throw new Error("Only http(s) URLs are allowed."); return u; };
 
-export function registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, send, update, shell, log = () => {} }) {
+export function registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, send, update, shell, log = () => {}, onSettingsSaved = () => {} }) {
   const h = (ch, fn) => ipcMain.handle(ch, wrap(fn));
   const checkProvider = p => { if (!AI_PROVIDERS.includes(p)) throw new Error("Unknown provider."); return p; };
   // The renderer never supplies AI settings: what gets sent, and where, is decided from the stored settings.
   const ai = () => store.read("settings").ai;
   h("store:load", () => ({ ...store.readAll(), hasKey: { gemini: secrets.hasKey("gemini"), groq: secrets.hasKey("groq") } }));
-  h("store:save", (name, data) => { if (!SAVEABLE.includes(name)) throw new Error("Cannot save " + name); store.write(name, data); return true; });
+  h("store:save", (name, data) => {
+    if (!SAVEABLE.includes(name)) throw new Error("Cannot save " + name);
+    store.write(name, data);
+    // Settings such as start with Windows take effect now, not on the next launch.
+    if (name === "settings") onSettingsSaved(store.read("settings"));
+    return true;
+  });
   h("schedule:upsert", item => scheduler.upsert(item));
   h("schedule:setStatus", (id, status) => scheduler.setStatus(id, status));
   h("ai:generate", ({ notes, template, profile, date, dateFormat, mode = "auto" }) => {
@@ -30,10 +36,12 @@ export function registerIpc({ ipcMain, store, secrets, generator, scheduler, zim
   h("update:check", () => update.check());
   // The address comes from the checker, never from the renderer.
   h("update:download", async () => { await shell.openExternal(update.downloadUrl); return true; });
-  h("zimbra:check", url => zimbra.checkSession(httpUrl(url)));
-  h("zimbra:open", async url => { await zimbra.openPage(httpUrl(url)); return true; });
-  h("zimbra:prepare", async ({ url, to, subject, body }) => {
-    await zimbra.prepareMessage({ url: httpUrl(url), to, subject, body }, n => send("prepare:step", n));
+  // The Zimbra address is the saved one, never one the renderer sends.
+  const zimbraUrl = () => httpUrl(store.read("settings").zimbra.url);
+  h("zimbra:check", () => zimbra.checkSession(zimbraUrl()));
+  h("zimbra:open", async () => { await zimbra.openPage(zimbraUrl()); return true; });
+  h("zimbra:prepare", async ({ to, subject, body }) => {
+    await zimbra.prepareMessage({ url: zimbraUrl(), to, subject, body }, n => send("prepare:step", n));
     return true;
   });
 }

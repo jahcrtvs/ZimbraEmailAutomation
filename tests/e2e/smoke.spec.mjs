@@ -2,6 +2,7 @@ import { test, expect, _electron as electron } from "@playwright/test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const launch = dir => electron.launch({ args: ["."], env: { ...process.env, DD_TEST: "1", DD_USER_DATA: dir } });
 const fresh = () => fs.mkdtempSync(path.join(os.tmpdir(), "dd-e2e-"));
@@ -61,6 +62,27 @@ test("a corrupt data file does not stop the app from starting", async () => {
   const w = await app.firstWindow();
   await expect(w.getByText("What did you work on today?")).toBeVisible();
   expect(fs.existsSync(path.join(dir, "history.json.bad"))).toBe(true);
+  await app.close();
+});
+
+test("the window cannot be navigated away from the app page", async () => {
+  const dir = fresh();
+  const other = path.join(dir, "other.html");
+  fs.writeFileSync(other, "<p>other page</p>");
+  const app = await launch(dir);
+  const w = await app.firstWindow();
+  await expect(w.getByText("What did you work on today?")).toBeVisible();
+  const before = w.url();
+  await w.evaluate(u => { window.location.href = u; }, pathToFileURL(other).href);
+  await w.waitForTimeout(1000);
+  // Read the page from main: Playwright keeps waiting for the cancelled navigation to finish.
+  const page = await app.evaluate(({ BrowserWindow }) => {
+    const wc = BrowserWindow.getAllWindows()[0].webContents;
+    return wc.executeJavaScript("({ text: document.body.innerText, hasApi: !!window.api })").then(r => ({ ...r, url: wc.getURL() }));
+  });
+  expect(page.url).toBe(before);
+  expect(page.text).toContain("What did you work on today?");
+  expect(page.hasApi).toBe(true);
   await app.close();
 });
 

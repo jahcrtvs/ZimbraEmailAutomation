@@ -51,10 +51,11 @@ else {
     });
     // Tests must not depend on the website being reachable; the checker treats a failed request as "up to date".
     const update = createUpdateChecker({ baseUrl: UPDATE_SITE, version: app.getVersion(), fetchImpl: process.env.DD_TEST ? async () => { throw new Error("network disabled in tests"); } : undefined });
-    registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, shell, send, update, log: crash.log });
+    const applyLogin = settings => app.setLoginItemSettings({ openAtLogin: !!settings.app.startWithWindows && !process.env.DD_TEST });
+    registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, shell, send, update, log: crash.log, onSettingsSaved: applyLogin });
     // Load the local model now so the first report does not wait for it. Best effort.
     generator.warmUp(store.read("settings").ai.local);
-    app.setLoginItemSettings({ openAtLogin: !!store.read("settings").app.startWithWindows && !process.env.DD_TEST });
+    applyLogin(store.read("settings"));
 
     win = new BrowserWindow({
       width: 1440, height: 900, minWidth: 1100, minHeight: 700, show: false, backgroundColor: "#0c0c0c", title: "Daily Digest",
@@ -69,6 +70,8 @@ else {
       if (!app.isQuitting && (chrome.isOpen() || store.read("schedule").some(i => i.status === "scheduled"))) { e.preventDefault(); win.minimize(); }
     });
     win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    // The window only ever shows the app page; any other page would get window.api.
+    win.webContents.on("will-navigate", e => e.preventDefault());
     watchRenderer(win.webContents, crash.log, {
       onGiveUp: () => dialog.showErrorBox("Daily Digest stopped working", "The window crashed several times. Quit Daily Digest and open it again. Details were saved to " + crash.file)
     });

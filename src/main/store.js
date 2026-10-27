@@ -3,6 +3,10 @@ import path from "node:path";
 import { DEFAULT_TEMPLATE, VARIABLES, EMPTY_NOTES } from "../shared/report.js";
 import { DEFAULT_LOCAL } from "../shared/ai.js";
 
+// Everyone at the company signs in to the same Zimbra, each with their own account.
+export const ZIMBRA_URL = "https://mail1.77global.biz";
+const OLD_ZIMBRA_PLACEHOLDER = "https://mail.company.local";
+
 export const DEFAULTS = () => ({
   history: [],
   schedule: [],
@@ -12,7 +16,7 @@ export const DEFAULTS = () => ({
     general: { defaultSendTime: "5:00 PM" },
     profile: { name: "", role: "" },
     email: { defaultRecipient: "manager@company.com", defaultSubject: "Daily Digest - {date}", dateFormat: "long" },
-    zimbra: { url: "https://mail.company.local" },
+    zimbra: { url: ZIMBRA_URL },
     ai: { local: { ...DEFAULT_LOCAL }, fallback: { provider: "groq", auto: false }, geminiModel: "flash", privacyTerms: "" },
     app: { startWithWindows: true }
   },
@@ -30,7 +34,7 @@ function merge(def, val) {
 }
 
 // Settings written before local AI existed had ai: { provider, model }.
-function migrateSettings(raw) {
+function migrateAi(raw) {
   const ai = raw?.ai;
   if (!isObj(ai) || "local" in ai || "fallback" in ai) return raw;
   const next = { ...ai };
@@ -38,6 +42,14 @@ function migrateSettings(raw) {
   if (["flash", "pro"].includes(ai.model)) next.geminiModel = ai.model;
   return { ...raw, ai: next };
 }
+
+// Installs that never changed the old placeholder address get the company one; a typed address is kept.
+function migrateZimbra(raw) {
+  if (raw?.zimbra?.url !== OLD_ZIMBRA_PLACEHOLDER) return raw;
+  return { ...raw, zimbra: { ...raw.zimbra, url: ZIMBRA_URL } };
+}
+
+const migrateSettings = raw => migrateZimbra(migrateAi(raw));
 
 export function createStore(dir) {
   fs.mkdirSync(dir, { recursive: true });

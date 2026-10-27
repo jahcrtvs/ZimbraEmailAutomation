@@ -20,10 +20,14 @@ export default async function handler(req, res) {
   const headers = { Authorization: `Bearer ${token}`, "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "daily-digest-site" };
 
   try {
-    const rel = await fetch(`${API}/repos/${REPO}/releases/latest`, { headers: { ...headers, Accept: "application/vnd.github+json" } });
-    if (!rel.ok) { console.error("release lookup failed", rel.status); return fail(res, 502, "The latest release could not be found. Try again in a minute."); }
+    // ?v=1.2.1 picks an older version; without it the newest release is served.
+    const v = new URL(req.url, "http://x").searchParams.get("v");
+    if (v !== null && !/^\d+\.\d+\.\d+$/.test(v)) return fail(res, 400, "That is not a version number.");
+    const rel = await fetch(`${API}/repos/${REPO}/releases/${v ? "tags/v" + v : "latest"}`, { headers: { ...headers, Accept: "application/vnd.github+json" } });
+    if (rel.status === 404 && v) return fail(res, 404, `Version ${v} was not found.`);
+    if (!rel.ok) { console.error("release lookup failed", rel.status); return fail(res, 502, "The release could not be found. Try again in a minute."); }
     const asset = (await rel.json()).assets?.find(a => /\.exe$/i.test(a.name));
-    if (!asset) return fail(res, 404, "The latest release has no Windows installer yet.");
+    if (!asset) return fail(res, 404, v ? `Version ${v} has no Windows installer.` : "The latest release has no Windows installer yet.");
 
     const file = await fetch(asset.url, { headers: { ...headers, Accept: "application/octet-stream" }, redirect: "manual" });
     const to = file.headers.get("location");

@@ -12,12 +12,12 @@ const api = {
         handler(req, res);
       });
     }
-    server.middlewares.use((req, _res, next) => { if (req.url === "/downloads") req.url = "/downloads.html"; next(); });
+    server.middlewares.use((req, _res, next) => { if (req.url === "/downloads" || req.url === "/policy") req.url += ".html"; next(); });
   },
 };
 
 export default defineConfig({
   plugins: [react(), api],
   server: { port: 5174 },
-  build: { rollupOptions: { input: { main: "index.html", downloads: "downloads.html" } } },
+  build: { rollupOptions: { input: { main: "index.html", downloads: "downloads.html", policy: "policy.html" } } },
 });

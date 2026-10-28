@@ -23,7 +23,7 @@ export function createOllamaStarter({ fetchImpl = fetch, spawnImpl = spawn, find
     if (!exe) return false;
     const models = String(local.baseUrl).trim().replace(/\/+$/, "") + "/models";
     if (await up(models)) return true;
-    spawnImpl(exe, ["serve"], { detached: true, stdio: "ignore", windowsHide: true }).unref();
+    spawnImpl(exe, ["serve"], { stdio: "ignore", windowsHide: true }).unref();
     for (let waited = 0; waited < timeoutMs; waited += 500) {
       await wait(500);
       if (await up(models)) return true;

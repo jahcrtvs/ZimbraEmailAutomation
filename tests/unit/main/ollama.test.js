@@ -20,7 +20,7 @@ describe("createOllamaStarter", () => {
     expect(await start(local)).toBe(true);
     expect(spawned[0]).toBe("ollama.exe");
     expect(spawned[1]).toEqual(["serve"]);
-    expect(spawned[2]).toMatchObject({ detached: true, windowsHide: true });
+    expect(spawned[2]).toMatchObject({ windowsHide: true });
   });
   it("does not start a second copy when one already answers", async () => {
     let spawned = false;

@@ -36,7 +36,7 @@ function NotesSummary({s,a}){
 function StatusPanel({s,a}){
   const {Button,Icon}=D();const st=s.digestStatus;const sent=st==="sent",prep=st==="prepared";
   const head=(ic,tone,t)=><div style={{display:"flex",alignItems:"center",gap:10}}><span style={{width:28,height:28,borderRadius:"50%",background:`var(--tint-${tone})`,color:`var(--status-${tone})`,display:"grid",placeItems:"center"}}><Icon name={ic} size={15} strokeWidth={2.4}/></span><span style={{font:"600 15px/1.2 var(--font-sans)"}}>{t}</span></div>;
-  const kv=(k,v)=><div><div style={{font:"var(--text-meta)",color:"var(--fg-3)",marginBottom:4}}>{k}</div><div>{v}</div></div>;
+  const kv=(k,v)=><div><div style={{font:"var(--text-meta)",color:"var(--fg-3)",marginBottom:4}}>{k}</div><div style={{overflowWrap:"anywhere"}}>{v}</div></div>;
   if(st==="scheduled")return <div style={{padding:24,display:"flex",flexDirection:"column",gap:20}}>
     {head("clock","info","Scheduled")}
     <div><div style={{font:"var(--text-led-time)",color:"var(--fg-accent)"}}>{s.schedule.time}</div><div style={{color:"var(--fg-2)",marginTop:10}}>{fmt(s.schedule.date)}</div></div>
@@ -96,7 +96,7 @@ export function NewDigestScreen({s,a}){
   return <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
     <PageHeader title={showDoc?"Daily Digest":"New Daily Digest"} meta={fmt(s.date)} right={<StatusBadge status={bs} label={bl} detail={st==="scheduled"&&!bl?s.schedule.time:undefined}/>}/>
     <div style={{flex:1,minHeight:0,display:"grid",gridTemplateColumns:showDoc?"320px minmax(0,1fr)":"minmax(0,1fr) minmax(0,1fr)"}}>
-      <div style={{borderRight:"1px solid var(--border-subtle)",minHeight:0,overflow:"hidden"}}>{locked?<StatusPanel s={s} a={a}/>:review?<NotesSummary s={s} a={a}/>:<InputPane s={s} a={a}/>}</div>
+      <div style={{borderRight:"1px solid var(--border-subtle)",minHeight:0,minWidth:0,overflow:"hidden"}}>{locked?<StatusPanel s={s} a={a}/>:review?<NotesSummary s={s} a={a}/>:<InputPane s={s} a={a}/>}</div>
       <div style={{display:"flex",flexDirection:"column",minHeight:0,background:"var(--surface-sunken)"}}>
         <div style={{display:"flex",alignItems:"center",gap:10,padding:"16px 28px 0"}}><Overline>{showDoc?"Report":"Preview"}</Overline><div style={{flex:1}}/>{showDoc&&<span style={{font:"var(--text-meta)",color:stage==="editing"?"var(--orange-400)":"var(--fg-3)"}}>{ver}</span>}</div>
         <div style={{flex:1,overflowY:"auto",padding:"14px 28px 24px"}}>

@@ -1,8 +1,8 @@
 // What the download buttons point at. Change VERSION and SIZE when a new installer is published.
 // /api/download (site/api/download.js) redirects to a release's installer in the private repo; the Download buttons
 // on the /downloads page use it. Set VITE_DOWNLOAD_URL in Vercel only to send those buttons somewhere else.
-export const VERSION = "1.4.3";
-export const SIZE = "116 MB";
+export const VERSION = "1.5.0";
+export const SIZE = "117 MB";
 export const DOWNLOAD_URL = import.meta.env.VITE_DOWNLOAD_URL || "/api/download";
 // The landing page's Download buttons open the versions page rather than starting a download.
 export const DOWNLOADS_PAGE = "/downloads";

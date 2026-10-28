@@ -19,7 +19,7 @@ export const DEFAULTS = () => ({
     email: { defaultRecipient: "manager@company.com", defaultSubject: "Daily Digest - {date}", dateFormat: "long" },
     zimbra: { url: ZIMBRA_URL },
     ai: { local: { ...DEFAULT_LOCAL }, fallback: { provider: "groq", auto: false }, geminiModel: "flash", privacyTerms: "" },
-    app: { startWithWindows: false }
+    app: { startWithWindows: false, onboarded: false }
   },
   // date is "" for drafts saved before it was kept. report is the generated Report saved with Save as Draft, or null.
   draft: { notes: { ...EMPTY_NOTES }, date: "", report: null }

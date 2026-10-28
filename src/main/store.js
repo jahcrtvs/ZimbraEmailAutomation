@@ -3,9 +3,8 @@ import path from "node:path";
 import { DEFAULT_TEMPLATE, VARIABLES, EMPTY_NOTES } from "../shared/report.js";
 import { DEFAULT_LOCAL } from "../shared/ai.js";
 
-// Everyone at the company signs in to the same Zimbra, each with their own account.
-export const ZIMBRA_URL = "https://mail1.77global.biz";
-const OLD_ZIMBRA_PLACEHOLDER = "https://mail.company.local";
+// A placeholder: each person sets their own Zimbra address in Settings.
+export const ZIMBRA_URL = "https://mail.example.com";
 
 export const DEFAULTS = () => ({
   history: [],
@@ -46,14 +45,6 @@ function migrateAi(raw) {
   return { ...raw, ai: next };
 }
 
-// Installs that never changed the old placeholder address get the company one; a typed address is kept.
-function migrateZimbra(raw) {
-  if (raw?.zimbra?.url !== OLD_ZIMBRA_PLACEHOLDER) return raw;
-  return { ...raw, zimbra: { ...raw.zimbra, url: ZIMBRA_URL } };
-}
-
-const migrateSettings = raw => migrateZimbra(migrateAi(raw));
-
 export function createStore(dir) {
   fs.mkdirSync(dir, { recursive: true });
   const file = n => path.join(dir, n + ".json");
@@ -64,7 +55,7 @@ export function createStore(dir) {
     const def = DEFAULTS()[name];
     let raw;
     try { raw = fs.readFileSync(file(name), "utf8"); } catch { return def; }
-    try { const parsed = JSON.parse(raw); return merge(def, name === "settings" ? migrateSettings(parsed) : parsed); }
+    try { const parsed = JSON.parse(raw); return merge(def, name === "settings" ? migrateAi(parsed) : parsed); }
     catch {
       try { fs.renameSync(file(name), file(name) + ".bad"); } catch { /* keep going */ }
       return def;

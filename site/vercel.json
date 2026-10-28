@@ -3,7 +3,10 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/downloads", "destination": "/downloads.html" }],
+  "rewrites": [
+    { "source": "/downloads", "destination": "/downloads.html" },
+    { "source": "/policy", "destination": "/policy.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

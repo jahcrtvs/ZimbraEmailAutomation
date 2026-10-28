@@ -1,0 +1,7 @@
+.pol section { padding-top: var(--space-xl); max-width: 68ch; }
+.pol h2 { font-size: var(--text-xl); margin-bottom: var(--space-sm); }
+.pol p, .pol li { color: var(--color-ink-2); }
+.pol p { margin-block: var(--space-sm); }
+.pol ul { display: grid; gap: var(--space-sm); padding-inline-start: var(--space-lg); }
+.pol a { color: var(--color-accent); }
+.pol code { font-family: var(--font-code); font-size: 0.9em; }

@@ -56,10 +56,10 @@ describe("zimbra", () => {
     expect(log.filter(e => e[0] === "insert" || e[0] === "press")).toEqual([["insert", "a@x.com"], ["press", ";"], ["insert", "b@y.org"], ["press", ";"]]);
   });
   it("throws COMPOSE naming the recipient Zimbra mangled", async () => {
-    const { ctx } = fakeBrowser({ toShows: "llee@77sof.com" });
+    const { ctx } = fakeBrowser({ toShows: "sam@exampl.com" });
     const z = createZimbra({ getContext: async () => ctx });
-    await expect(z.prepareMessage({ url: "https://z", to: "llee@77soft.com", subject: "s", body: "b" }, () => {}))
-      .rejects.toMatchObject({ code: "COMPOSE", message: expect.stringContaining("llee@77soft.com") });
+    await expect(z.prepareMessage({ url: "https://z", to: "sam@example.com", subject: "s", body: "b" }, () => {}))
+      .rejects.toMatchObject({ code: "COMPOSE", message: expect.stringContaining("sam@example.com") });
   });
   it("fills the TinyMCE iframe body when there is no visible plain-text body", async () => {
     const { ctx, log } = fakeBrowser({ htmlBody: true });

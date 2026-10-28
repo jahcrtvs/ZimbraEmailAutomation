@@ -27,7 +27,6 @@ A Windows desktop app that turns rough daily notes into a formal status email, t
 
 Download the latest installer from the [Releases page](https://github.com/jahcrtvs/ZimbraEmailAutomation/releases) and run `Daily Digest Setup X.Y.Z.exe`.
 
-- This repository is private, so you must be signed in to GitHub with access to it.
 - The installer is **not code-signed**. On first run Windows SmartScreen shows "Windows protected your PC". Click **More info**, then **Run anyway**.
 - It installs per user. You can change the install folder.
 
@@ -239,4 +238,6 @@ Known limits:
 
 ## License
 
-No license has been chosen. All rights reserved by the repository owner until one is added.
+Daily Digest is free software under the [GNU General Public License v3.0](LICENSE). You may use, study, change and share it, but any version you distribute must also be released under the GPL-3.0 with its source code.
+
+The name "Daily Digest" and its logo are not covered by that license. See [TRADEMARK.md](TRADEMARK.md).

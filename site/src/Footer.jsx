@@ -15,6 +15,7 @@ export default function Footer({ home = false }) {
           <a href={DOWNLOADS_PAGE}>Downloads</a>
           <a href={to("#setup")}>Setup</a>
           <a href={to("#privacy")}>Privacy</a>
+          <a href="/policy">Code signing and privacy policy</a>
         </nav>
         {DONATE_URL && (
           <div className="foot-col">

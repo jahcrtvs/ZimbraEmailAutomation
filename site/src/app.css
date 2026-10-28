@@ -1,5 +1,5 @@
 /* Hallmark · shape: custom product tour · genre: modern-minimal · theme: custom · job: download · idea: "One day's rough notes become an email that waits in Zimbra for you to send." · vibe: "warm, clean, calm, plainly trustworthy"
- * paper: #0c0c0c (the app's ink-1) · accent: #f6a23a (the app's digest orange) · display: LED Dot-Matrix (the app's own) · body: Albert Sans · hero: split, copy left, real report capture right with two floating chips · nav: sticky edge-aligned wordmark, three tracked links, one pill · footer: one line · imagery: real app captures · signature: the app's real report resolving through a dither, with "Prepared, never sent" docking onto it
+ * paper: #0c0c0c (the app's ink-1) · accent: #f6a23a (the app's digest orange) · display: Doto (the app's own) · body: Albert Sans · hero: split, copy left, real report capture right with two floating chips · nav: sticky edge-aligned wordmark, three tracked links, one pill · footer: one line · imagery: real app captures · signature: the app's real report resolving through a dither, with "Prepared, never sent" docking onto it
  * axes: dark/grotesk-sans/warm · posture: restrained · contrast: pass · fold: pass · v2.0.0 */
 /* Hallmark · pre-emit critique: P4 H4 E3 S4 R4 V4 · weakest: E, the dialog captures are 1x so they are shown at natural size, never upscaled */
 /* Hallmark · waive 79 · hero grid centred in a full-height hero, equal space above and below · the capture is 1x, so growing it would blur it */
@@ -8,8 +8,6 @@
 @import url("./tokens.css");
 @import url("./base.css");
 
-/* the app's own display face, src/renderer/src/styles/fonts.css */
-@font-face { font-family: "LED Dot-Matrix"; src: url("./fonts/LEDDotMatrix-400.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 
 :root { color-scheme: dark; }
 html { scroll-behavior: smooth; }

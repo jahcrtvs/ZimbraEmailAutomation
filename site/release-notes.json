@@ -39,5 +39,8 @@
   ],
   "1.4.2": [
     { "type": "fix", "text": "Long recipient lists and subjects no longer run off the edge of the Send Daily Digest window." }
+  ],
+  "1.5.0": [
+    { "type": "feat", "text": "A short tutorial shows you how to use Daily Digest the first time you open it. Show it again any time from Settings." }
   ]
 }

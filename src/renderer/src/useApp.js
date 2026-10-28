@@ -12,7 +12,7 @@ const initial = () => ({
   digestStatus: "none", schedule: { date: new Date(), time: "5:00 PM", to: "" }, items: [], modal: null, zimbra: false, toast: null,
   genAt: null, savedAt: null, sentAt: null, history: [], historySel: null, template: DEFAULT_TEMPLATE,
   settings: null, hasKey: { gemini: false, groq: false }, genStep: 0, prepStep: 0, testing: false, testingAI: false, curId: null, genError: null, modalDetails: null, modalCode: null,
-  update: null, updateDismissed: false, aiSource: null, aiNote: null, cloudAsk: null, audit: [], localStatus: null, checkingLocal: false, genLines: [], notifications: [], draftReport: null
+  update: null, updateDismissed: false, aiSource: null, aiNote: null, cloudAsk: null, audit: [], localStatus: null, checkingLocal: false, genLines: [], notifications: [], draftReport: null, tour: null
 });
 // A saved draft Report is reopened only if it has sentences to show.
 const validReport = r => r && Array.isArray(r.blocks) && r.blocks.length > 0 ? r : null;
@@ -59,7 +59,7 @@ export function useApp() {
       // Restore a back-filled digest date from the draft; never a future one.
       const saved = /^\d{4}-\d{2}-\d{2}$/.test(d.draft.date || "") && hasNotes(d.draft.notes) && d.draft.date < toISODate(today) ? fromISODate(d.draft.date) : today;
       const report = hasNotes(d.draft.notes) ? validReport(d.draft.report) : null;
-      setS(p => ({ ...p, settings, hasKey: d.hasKey, audit: d.audit, template: d.template.body, today, date: saved, notifications: d.notifications || [],
+      setS(p => ({ ...p, settings, tour: settings.app.onboarded ? null : 0, hasKey: d.hasKey, audit: d.audit, template: d.template.body, today, date: saved, notifications: d.notifications || [],
         notes: { ...EMPTY_NOTES, ...d.draft.notes }, digestStatus: report ? "ready" : hasNotes(d.draft.notes) ? "draft" : "none",
         ...(report ? { stage: "review", blocks: report.blocks, aiSource: report.aiSource || null, aiNote: report.aiNote || null, genAt: report.genAt || null, savedAt: report.savedAt || null, draftReport: report } : {}),
         history: d.history.map(historyFromDisk), items: d.schedule.map(itemFromDisk),
@@ -197,6 +197,16 @@ export function useApp() {
     async openZimbra() { toast("Opening Zimbra in your browser…", "info"); try { await api().zimbra.open(); } catch (e) { toast("Unable to open Zimbra.", "danger"); } },
     setModal: modal => up({ modal }), closeModal: () => { up({ modal: null }); },
     clearToast: () => up({ toast: null }),
+    startTour: () => up({ tour: 0 }),
+    tourStep: tour => up({ tour }),
+    // Skip and finish both count: the tour opens by itself only once. Settings can show it again.
+    finishTour: () => {
+      const c = ref.current;
+      up({ tour: null });
+      if (c.settings.app.onboarded) return;
+      const settings = { ...c.settings, app: { ...c.settings.app, onboarded: true } };
+      api().store.save("settings", settings).then(() => up({ settings }), () => {});
+    },
     dismissUpdate: () => up({ updateDismissed: true }),
     downloadUpdate: () => api().update.download().catch(() => toast("Could not open the download page.", "danger")),
     async markSent() {

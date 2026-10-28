@@ -22,7 +22,7 @@ export function SettingsScreen({s,a}){
     const done=a.saveSettings({apiKey:p.apiKey,settings:{...s.settings,
       general:{...s.settings.general,defaultSendTime:p.time},
       alarm:{enabled:p.alarmOn,time:p.alarmTime},
-      app:{startWithWindows:p.startup},
+      app:{...s.settings.app,startWithWindows:p.startup},
       profile:{name:p.name,role:p.role},
       email:{defaultRecipient:p.to,defaultSubject:p.subject,dateFormat:p.dateFormat},
       zimbra:{url:p.url},
@@ -38,7 +38,7 @@ export function SettingsScreen({s,a}){
   return <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
     <PageHeader title="Settings" right={<Button variant="primary" kbd="Ctrl+S" onClick={save}>Save</Button>}/>
     <div style={{flex:1,overflowY:"auto"}}><div className="settings-cols" style={{padding:"4px 28px 28px",columnWidth:420,columnGap:14}}>
-      <Card title="General"><div style={col}><div style={row}><TimePicker label="Default send time" value={p.time} onChange={set("time")}/></div><Switch label="Start with Windows" checked={p.startup} onChange={set("startup")}/></div></Card>
+      <Card title="General"><div style={col}><div style={row}><TimePicker label="Default send time" value={p.time} onChange={set("time")}/></div><Switch label="Start with Windows" checked={p.startup} onChange={set("startup")}/><div><Button variant="outline" icon="circle-help" onClick={a.startTour}>Show tutorial</Button></div></div></Card>
       <Card title="Daily alarm" subtitle="A Windows notification on weekdays to write today's digest. Skipped once it is sent or scheduled.">
         <div style={col}>
           <Switch label="Remind me" checked={p.alarmOn} onChange={set("alarmOn")}/>

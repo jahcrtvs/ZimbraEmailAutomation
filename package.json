@@ -2,6 +2,7 @@
   "name": "daily-digest",
   "version": "1.4.3",
   "description": "Daily Digest",
+  "license": "GPL-3.0-only",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

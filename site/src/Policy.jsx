@@ -19,6 +19,7 @@ export default function Policy() {
         <section id="code-signing">
           <h2>Code signing policy</h2>
           <p>Daily Digest is free software under the <a href={REPO + "/blob/main/LICENSE"}>GNU General Public License v3.0</a>. Its source code is public at <a href={REPO}>{REPO.replace("https://", "")}</a>.</p>
+          <p>Free code signing provided by <a href="https://signpath.io">SignPath.io</a>, certificate by <a href="https://signpath.org">SignPath Foundation</a>.</p>
           <p><strong>Status:</strong> a request for free code signing from SignPath Foundation is pending. Until it is approved, the Windows installer is not signed.</p>
           <p>Once approved, the installer is signed with a certificate from SignPath Foundation, using the free code signing service of SignPath.io. Signing happens only for builds made from the public repository by the GitHub Actions workflow <code>.github/workflows/release.yml</code>, when a version tag is pushed. Nobody signs files by hand.</p>
           <p>Roles: Jah Dela Cruz is the only author, reviewer and approver of signing requests.</p>
@@ -33,6 +34,7 @@ export default function Policy() {
             <li><strong>Groq or Gemini, only if you turn on the cloud fallback.</strong> If the local AI fails, the app asks first (or sends automatically, if you chose that). It sends your notes with emails, links, phone numbers, names and your hidden words replaced by placeholders. Your API key is encrypted by Windows and never shown again.</li>
             <li><strong>This website.</strong> On launch and every 4 hours, the app asks <code>/api/version</code> for the newest version number. The request carries no personal data and no version. If it fails, the app opens normally. The website is hosted on Vercel, which keeps standard server logs.</li>
           </ul>
+          <p>Third-party policies for the optional cloud fallback: <a href="https://groq.com/privacy-policy">Groq privacy policy</a> and <a href="https://ai.google.dev/gemini-api/terms">Gemini API terms, including how Google uses your data</a>. Ollama runs on your computer and sends nothing.</p>
           <p>Your history, schedule, template and settings are stored only on your computer, in the app's user-data folder. Uninstalling the app does not delete them; you can delete that folder yourself.</p>
           <p>Questions: open an issue at <a href={REPO + "/issues"}>{REPO.replace("https://", "")}/issues</a>.</p>
         </section>

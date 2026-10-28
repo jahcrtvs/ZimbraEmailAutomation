@@ -9,13 +9,15 @@ export default function Footer({ home = false }) {
         <div className="foot-brand">
           <a className="mark" href={to("#top")}><img src="/icon.png" alt="" width="24" height="24" />Daily Digest</a>
           <p>Turn daily notes into a Zimbra email. Free for Windows.</p>
+          <p>Free code signing provided by <a href="https://signpath.io">SignPath.io</a>, certificate by <a href="https://signpath.org">SignPath Foundation</a>.</p>
         </div>
         <nav className="foot-col" aria-label="Product">
           <h2>Product</h2>
           <a href={DOWNLOADS_PAGE}>Downloads</a>
           <a href={to("#setup")}>Setup</a>
           <a href={to("#privacy")}>Privacy</a>
-          <a href="/policy">Code signing and privacy policy</a>
+          <a href="/policy#code-signing">Code signing policy</a>
+          <a href="/policy#privacy-policy">Privacy policy</a>
         </nav>
         {DONATE_URL && (
           <div className="foot-col">

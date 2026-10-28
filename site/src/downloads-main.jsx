@@ -1,4 +1,5 @@
 import "@fontsource-variable/albert-sans";
+import "@fontsource/doto/400.css";
 import "./app.css";
 import "./downloads.css";
 import { StrictMode } from "react";

@@ -12,7 +12,7 @@ export function SettingsScreen({s,a}){
   const [p,setP]=React.useState({
     name:s.settings.profile.name,role:s.settings.profile.role,
     to:s.settings.email.defaultRecipient,subject:s.settings.email.defaultSubject,dateFormat:s.settings.email.dateFormat,
-    time:s.settings.general.defaultSendTime,url:s.settings.zimbra.url,alarmOn:s.settings.alarm.enabled,alarmTime:s.settings.alarm.time,
+    time:s.settings.general.defaultSendTime,url:s.settings.zimbra.url,alarmOn:s.settings.alarm.enabled,alarmTime:s.settings.alarm.time,startup:s.settings.app.startWithWindows,
     lurl:ai.local.baseUrl,lmodel:ai.local.model,fb:ai.fallback.provider,fbAuto:ai.fallback.auto?"auto":"ask",gmodel:ai.geminiModel,terms:ai.privacyTerms,apiKey:""});
   const [tried,setTried]=React.useState(false);
   const badTo=!isValidRecipients(p.to),badUrl=!validUrl(p.url),badLocal=!validUrl(p.lurl)||!p.lmodel.trim();
@@ -22,6 +22,7 @@ export function SettingsScreen({s,a}){
     const done=a.saveSettings({apiKey:p.apiKey,settings:{...s.settings,
       general:{...s.settings.general,defaultSendTime:p.time},
       alarm:{enabled:p.alarmOn,time:p.alarmTime},
+      app:{startWithWindows:p.startup},
       profile:{name:p.name,role:p.role},
       email:{defaultRecipient:p.to,defaultSubject:p.subject,dateFormat:p.dateFormat},
       zimbra:{url:p.url},
@@ -37,7 +38,7 @@ export function SettingsScreen({s,a}){
   return <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
     <PageHeader title="Settings" right={<Button variant="primary" kbd="Ctrl+S" onClick={save}>Save</Button>}/>
     <div style={{flex:1,overflowY:"auto"}}><div className="settings-cols" style={{padding:"4px 28px 28px",columnWidth:420,columnGap:14}}>
-      <Card title="General"><div style={row}><TimePicker label="Default send time" value={p.time} onChange={set("time")}/></div></Card>
+      <Card title="General"><div style={col}><div style={row}><TimePicker label="Default send time" value={p.time} onChange={set("time")}/></div><Switch label="Start with Windows" checked={p.startup} onChange={set("startup")}/></div></Card>
       <Card title="Daily alarm" subtitle="A Windows notification on weekdays to write today's digest. Skipped once it is sent or scheduled.">
         <div style={col}>
           <Switch label="Remind me" checked={p.alarmOn} onChange={set("alarmOn")}/>

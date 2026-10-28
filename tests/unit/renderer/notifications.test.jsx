@@ -36,7 +36,7 @@ describe("Settings: daily alarm", () => {
     let saved;
     render(<SettingsScreen s={s()} a={{ saveSettings: x => { saved = x; } }} />);
     expect(screen.queryByText("Alarm time")).toBeNull();
-    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.click(screen.getAllByRole("switch")[1]);
     expect(screen.getByText("Alarm time")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /^Save(?! and)/ }));
     expect(saved.settings.alarm).toEqual({ enabled: true, time: "4:30 PM" });

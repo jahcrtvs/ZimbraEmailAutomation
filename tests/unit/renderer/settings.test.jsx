@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from "react";
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { SettingsScreen } from "../../../src/renderer/src/screens/Settings.jsx";
 import { DEFAULTS } from "../../../src/main/store.js";
 
@@ -47,6 +47,15 @@ describe("Settings: local AI card", () => {
     render(<SettingsScreen s={state("none", none, {}, { localStatus })} a={a} />);
     expect(screen.getByText("Local AI is not running.")).toBeTruthy();
     expect(screen.getByText(/Install Ollama/)).toBeTruthy();
+  });
+});
+
+describe("Settings: start with Windows", () => {
+  it("saves as soon as the switch is flipped", () => {
+    const saved = [];
+    render(<SettingsScreen s={state("none", none)} a={{ ...a, saveSettings: p => saved.push(p.settings.app.startWithWindows) }} />);
+    fireEvent.click(screen.getByText("Start with Windows").closest("label").querySelector("[role=switch]"));
+    expect(saved).toEqual([true]);
   });
 });
 

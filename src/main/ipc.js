@@ -1,3 +1,7 @@
+import { extname } from "node:path";
+import { readDeck } from "./slides.js";
+import { SLIDE_ROLES } from "../shared/slides.js";
+
 const AI_PROVIDERS = ["gemini", "groq"];
 const MODES = ["auto", "cloud", "template"];
 const SAVEABLE =["history", "template", "settings", "draft"];
@@ -8,7 +12,7 @@ const wrap = fn => async (_e, ...args) => {
 };
 const httpUrl = u => { let p; try { p = new URL(u); } catch { throw new Error("Invalid URL."); } if (!/^https?:$/.test(p.protocol)) throw new Error("Only http(s) URLs are allowed."); return u; };
 
-export function registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, send, update, shell, notifications, log = () => {}, onSettingsSaved = () => {} }) {
+export function registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, send, update, shell, notifications, pickSlides = async () => null, log = () => {}, onSettingsSaved = () => {} }) {
   const h = (ch, fn) => ipcMain.handle(ch, wrap(fn));
   const checkProvider = p => { if (!AI_PROVIDERS.includes(p)) throw new Error("Unknown provider."); return p; };
   // The renderer never supplies AI settings: what gets sent, and where, is decided from the stored settings.
@@ -27,6 +31,25 @@ export function registerIpc({ ipcMain, store, secrets, generator, scheduler, zim
     if (!MODES.includes(mode)) throw new Error("Unknown mode.");
     // History is read here, never taken from the renderer, for the same reason as the AI settings.
     return generator.generate({ notes, template, profile, date, dateFormat, mode, ai: ai(), history: store.read("history"), onProgress: p => send("ai:progress", p) });
+  });
+  // The picked deck stays here between the two calls, so the page never sends a path or the slide text.
+  let picked = null;
+  h("slides:pick", async () => {
+    const file = await pickSlides();
+    if (!file) return null;
+    picked = null;
+    picked = { deck: await readDeck(file.data, extname(file.name)), fileName: file.name };
+    return { fileName: file.name, slides: picked.deck.slides.length };
+  });
+  h("slides:sort", async ({ role, mode = "auto" } = {}) => {
+    if (!SLIDE_ROLES.includes(role)) throw new Error("Unknown role.");
+    if (!MODES.includes(mode)) throw new Error("Unknown mode.");
+    if (!picked) throw Object.assign(new Error("Choose a presentation first."), { code: "NO_FILE" });
+    const { profile, ai: settings } = store.read("settings");
+    const r = await generator.sortSlides({ deck: picked.deck, role, fileName: picked.fileName, profile, ai: settings, mode });
+    // Kept after needs-consent, so the answer does not need the file again.
+    if (r.status === "ok") picked = null;
+    return r;
   });
   h("ai:status", () => generator.localStatus(ai().local));
   h("ai:test", p => generator.testConnection(checkProvider(p), ai().geminiModel));

@@ -15,7 +15,7 @@ export function inventsFacts(item, sentence) {
 
 // Words that say what kind of entry an item is, not what it is about.
 const FILLER = new Set(["the", "and", "for", "with", "from", "about", "into", "work", "worked", "continue", "continued", "finish", "finished", "fixed", "completed", "studied", "started", "still", "today", "tomorrow", "none", "nothing", "nil"]);
-const contentStems = s => (s.toLowerCase().match(/[a-z0-9]+/g) || []).filter(w => (w.length >= 3 || /\d/.test(w)) && !FILLER.has(w)).map(w => w.slice(0, 4));
+export const contentStems = s => (s.toLowerCase().match(/[a-z0-9]+/g) || []).filter(w => (w.length >= 3 || /\d/.test(w)) && !FILLER.has(w)).map(w => w.slice(0, 4));
 
 // True when the sentence mentions something from its own item (tense and typos allowed).
 // The schema fixes how many sentences there are, not which item each one is about.

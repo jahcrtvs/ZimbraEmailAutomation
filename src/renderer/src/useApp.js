@@ -1,10 +1,18 @@
 import React from "react";
 import { fmt, toISODate, fromISODate, formatTime } from "@shared/time.js";
 import { hasNotes, EMPTY_NOTES, SAMPLE_NOTES, DEFAULT_TEMPLATE, subjectFor, blocksToText } from "@shared/report.js";
+import { mergeNotes } from "@shared/slides.js";
+import { PROVIDER_NAMES } from "@shared/ai.js";
 import { itemFromDisk, itemToDisk, historyFromDisk, historyToDisk } from "./persist.js";
 
 const api = () => window.api;
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
+// What the user is told after slides are added: how they were sorted, then what to do next.
+const slidesMessage = (r, why) => [
+  why, r.note,
+  r.source === "local" ? "Sorted by the local AI." : r.source === "template" ? "" : `Sorted by ${PROVIDER_NAMES[r.source]} (cloud). Emails, links, phone numbers and names were replaced with placeholders first.`,
+  "Review the lines, then press Generate Digest."
+].filter(Boolean).join(" ");
 const draftOf = b => Object.fromEntries(b.map((x, i) => x.type === "section" ? [i, x.items.join("\n")] : null).filter(Boolean));
 
 const initial = () => ({
@@ -12,7 +20,7 @@ const initial = () => ({
   digestStatus: "none", schedule: { date: new Date(), time: "5:00 PM", to: "" }, items: [], modal: null, zimbra: false, toast: null,
   genAt: null, savedAt: null, sentAt: null, history: [], historySel: null, template: DEFAULT_TEMPLATE,
   settings: null, hasKey: { gemini: false, groq: false }, genStep: 0, prepStep: 0, testing: false, testingAI: false, curId: null, genError: null, modalDetails: null, modalCode: null,
-  update: null, updateDismissed: false, aiSource: null, aiNote: null, cloudAsk: null, audit: [], localStatus: null, checkingLocal: false, genLines: [], notifications: [], draftReport: null, tour: null
+  update: null, updateDismissed: false, aiSource: null, aiNote: null, cloudAsk: null, audit: [], localStatus: null, checkingLocal: false, genLines: [], notifications: [], draftReport: null, tour: null, slidesDlg: null, slidesAsk: null, slidesNote: null
 });
 // A saved draft Report is reopened only if it has sentences to show.
 const validReport = r => r && Array.isArray(r.blocks) && r.blocks.length > 0 ? r : null;
@@ -114,7 +122,7 @@ export function useApp() {
     },
     clearNotifications: () => api().notifications.clear().catch(failed("clear notifications")),
     newDigest: () => { const c = ref.current; if (["none", "sent"].includes(c.digestStatus)) a.resetDigest(); else up({ page: "new" }); },
-    resetDigest: () => { clear(); const now = new Date(); up(p => ({ page: "new", stage: "form", notes: { ...EMPTY_NOTES }, blocks: [], draft: {}, digestStatus: "none", savedAt: null, sentAt: null, curId: null, date: now, today: now, modal: null, genError: null, aiSource: null, aiNote: null, cloudAsk: null, genLines: [], draftReport: null })); api().store.save("draft", { notes: { ...EMPTY_NOTES }, report: null }).catch(failed("clear your notes")); },
+    resetDigest: () => { clear(); const now = new Date(); up(p => ({ page: "new", stage: "form", notes: { ...EMPTY_NOTES }, blocks: [], draft: {}, digestStatus: "none", savedAt: null, sentAt: null, curId: null, date: now, today: now, modal: null, genError: null, aiSource: null, aiNote: null, cloudAsk: null, genLines: [], draftReport: null, slidesDlg: null, slidesAsk: null, slidesNote: null })); api().store.save("draft", { notes: { ...EMPTY_NOTES }, report: null }).catch(failed("clear your notes")); },
     setNotes: notes => up(p => ({ notes, digestStatus: p.digestStatus === "none" ? "draft" : p.digestStatus })),
     setDate: date => up({ date }),
     fillSample:() => up({ notes: { ...SAMPLE_NOTES }, digestStatus: "draft" }),
@@ -122,12 +130,35 @@ export function useApp() {
     cloudSend: () => a.run("cloud"),
     // Keep why the local AI failed: "you chose not to send" alone hides what needs fixing.
     cloudDecline: () => a.run("template", ref.current.cloudAsk?.failure?.message),
+    // Import slides: the file is picked and read in the main process, which keeps the deck until it is sorted.
+    openSlides: () => up({ modal: { t: "slides" }, slidesDlg: { role: "attended", file: null, busy: false, error: null } }),
+    setSlidesRole: role => up(p => ({ slidesDlg: { ...p.slidesDlg, role } })),
+    async pickSlides() {
+      up(p => ({ slidesDlg: { ...p.slidesDlg, busy: true, error: null } }));
+      try {
+        const file = await api().slides.pick();
+        up(p => ({ slidesDlg: { ...p.slidesDlg, busy: false, file: file || p.slidesDlg.file } }));
+      } catch (e) { up(p => ({ slidesDlg: { ...p.slidesDlg, busy: false, file: null, error: String(e.message || e) } })); }
+    },
+    addSlides: () => a.sortSlides("auto"),
+    slidesCloudSend: () => a.sortSlides("cloud"),
+    slidesCloudDecline: () => a.sortSlides("template", ref.current.slidesAsk?.failure?.message),
+    async sortSlides(mode, why) {
+      up(p => ({ modal: { t: "slides" }, slidesAsk: null, slidesDlg: { ...p.slidesDlg, busy: true, error: null } }));
+      try {
+        const r = await api().slides.sort({ role: ref.current.slidesDlg.role, mode });
+        if (r.status === "needs-consent") { up({ modal: { t: "slidesCloud" }, slidesAsk: r }); return; }
+        up(p => ({ notes: mergeNotes(p.notes, r.draft), digestStatus: p.digestStatus === "none" ? "draft" : p.digestStatus, modal: null, slidesDlg: null, slidesNote: slidesMessage(r, why) }));
+        if (r.source === "groq" || r.source === "gemini") api().store.load().then(d => up({ audit: d.audit }), () => {});
+        toast("Slides added to your notes.");
+      } catch (e) { up(p => ({ modal: { t: "slides" }, slidesDlg: { ...p.slidesDlg, busy: false, error: String(e.message || e) } })); }
+    },
     async run(mode, why) {
       const c = ref.current;
       if (!hasNotes(c.notes)) return;
       clear();
       const id = ++genId.current;
-      up({ page: "new", stage: "generating", genStep: 0, modal: null, genError: null, cloudAsk: null, genLines: [] });
+      up({ page: "new", stage: "generating", genStep: 0, modal: null, genError: null, cloudAsk: null, genLines: [], slidesNote: null });
       later(() => up({ genStep: 1 }), 600);
       later(() => up({ genStep: 2 }), 1200);
       try {

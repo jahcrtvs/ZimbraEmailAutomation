@@ -43,7 +43,7 @@ async function readStream(res, onSentence) {
   return { text, sent: scanner.result() };
 }
 
-async function attempt(fetchImpl, local, { system, shots = [], text, counts, maxTokens, onSentence }) {
+async function attempt(fetchImpl, local, { system, shots = [], text, counts, maxTokens, schema, onSentence }) {
   const total = counts ? SECTION_KEYS.reduce((n, k) => n + counts[k], 0) : 0;
   const body = {
     model: local.model,
@@ -51,7 +51,7 @@ async function attempt(fetchImpl, local, { system, shots = [], text, counts, max
     temperature: 0.2,
     max_tokens: maxTokens ?? (counts ? 80 + 60 * total : 1024),
     keep_alive: KEEP_ALIVE,
-    response_format: { type: "json_schema", json_schema: { name: "digest", strict: true, schema: replySchema(counts) } }
+    response_format: { type: "json_schema", json_schema: { name: "digest", strict: true, schema: schema ?? replySchema(counts) } }
   };
   if (onSentence) body.stream = true;
   let res;
@@ -83,16 +83,17 @@ async function attempt(fetchImpl, local, { system, shots = [], text, counts, max
 
 const hasSentences = r => SECTION_KEYS.some(k => r[k].length);
 
-export async function runLocal({ fetchImpl = fetch, local, text, system, shots, counts, maxTokens, onSentence }) {
+// schema and parse replace the daily-report ones, for a reply of another shape.
+export async function runLocal({ fetchImpl = fetch, local, text, system, shots, counts, maxTokens, schema, parse = r => parseReply(r, "The local model"), onSentence }) {
   for (let i = 0; i < 2; i++) {
     let got;
-    try { got = await attempt(fetchImpl, local, { system, shots, text, counts, maxTokens, onSentence: i === 0 ? onSentence : undefined }); }
+    try { got = await attempt(fetchImpl, local, { system, shots, text, counts, maxTokens, schema, onSentence: i === 0 ? onSentence : undefined }); }
     catch (e) {
       if (e.partial && hasSentences(e.partial)) return { ...e.partial, partial: true };
       throw e;
     }
     const reply = typeof got === "string" ? got : got.text;
-    try { return parseReply(reply, "The local model"); } catch {
+    try { return parse(reply); } catch {
       // A stream that ended early (for example at the token limit) still gave us finished sentences: keep them.
       if (typeof got !== "string" && hasSentences(got.sent)) return { ...got.sent, partial: true };
       /* otherwise ask once more, without streaming */

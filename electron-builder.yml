@@ -5,6 +5,11 @@ directories:
 files:
   - out/**
   - package.json
+  # Slide text needs only legacy/build/pdf.mjs and pdf.worker.mjs. The rest of pdf.js is a viewer, fonts and other
+  # builds, and its optional native canvas package is a 38 MB binary that text extraction does not use.
+  - "!node_modules/pdfjs-dist/**"
+  - "node_modules/pdfjs-dist/{package.json,LICENSE,legacy/build/pdf.mjs,legacy/build/pdf.worker.mjs}"
+  - "!node_modules/@napi-rs/**"
 win:
   target:
     - target: nsis

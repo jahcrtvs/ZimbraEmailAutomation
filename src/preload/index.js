@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld("api", {
   logError: e => call("log:error", e),
   generate: p => call("ai:generate", p),
   onGenerateProgress: on("ai:progress"),
+  slides: { pick: () => call("slides:pick"), sort: p => call("slides:sort", p) },
   localStatus: () => call("ai:status"),
   testAI: provider => call("ai:test", provider),
   setApiKey: (key, provider) => call("ai:setKey", key, provider),

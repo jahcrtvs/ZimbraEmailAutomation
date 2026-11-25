@@ -12,6 +12,7 @@ import { createZimbra } from "./zimbra.js";
 import { createFakeZimbra } from "./zimbra.fake.js";
 import { createChrome } from "./chrome.js";
 import { createOllamaStarter } from "./ollama.js";
+import { createSlidePicker } from "./slidefile.js";
 import { createUpdateChecker } from "./update.js";
 import { registerIpc } from "./ipc.js";
 import { createCrashLog, catchUncaught, watchRenderer } from "./crash.js";
@@ -41,6 +42,9 @@ else {
       fetchImpl: process.env.DD_TEST ? async () => { throw new Error("network disabled in tests"); } : undefined,
       startLocal: process.env.DD_TEST ? undefined : createOllamaStarter()
     });
+    // Tests answer the file dialog with the file named in DD_SLIDES_FILE, or cancel it.
+    const testDialog = { showOpenDialog: async () => process.env.DD_SLIDES_FILE ? { canceled: false, filePaths: [process.env.DD_SLIDES_FILE] } : { canceled: true, filePaths: [] } };
+    const pickSlides = createSlidePicker({ dialog: process.env.DD_TEST ? testDialog : dialog, getWindow: () => win });
     const send = (ch, payload) => { if (win && !win.isDestroyed()) win.webContents.send(ch, payload); };
     const chrome = createChrome({ profileDir: join(dir, "chrome-profile"), launch: (profile, opts) => chromium.launchPersistentContext(profile, opts) });
     app.on("before-quit", () => { chrome.close(); });
@@ -66,7 +70,7 @@ else {
     // Tests must not depend on the website being reachable; the checker treats a failed request as "up to date".
     const update = createUpdateChecker({ baseUrl: UPDATE_SITE, version: app.getVersion(), fetchImpl: process.env.DD_TEST ? async () => { throw new Error("network disabled in tests"); } : undefined });
     const applyLogin = settings => app.setLoginItemSettings({ openAtLogin: !!settings.app.startWithWindows && !process.env.DD_TEST });
-    registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, shell, send, update, notifications, log: crash.log, onSettingsSaved: applyLogin });
+    registerIpc({ ipcMain, store, secrets, generator, scheduler, zimbra, shell, send, update, notifications, pickSlides, log: crash.log, onSettingsSaved: applyLogin });
     // Load the local model now so the first report does not wait for it. Best effort.
     generator.warmUp(store.read("settings").ai.local);
     applyLogin(store.read("settings"));

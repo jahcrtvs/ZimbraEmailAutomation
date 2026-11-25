@@ -9,7 +9,7 @@ One of the five boxes the user types rough notes into: Today's Work, Topics / Le
 _Avoid_: Input, category, textbox
 
 **Slide deck**:
-A presentation file (.pptx or PDF) the user imports. Its titles and bullet points are sorted into a draft of the Note fields, which the user reviews before generating. It is never sent anywhere as a file, only its text, and only through the same consent and sanitising as notes.
+A presentation file (.pptx or PDF) or a Jupyter notebook (.ipynb) the user imports. Its titles and bullet points, or a notebook's markdown headings and text (never its code or output), are sorted into a draft of the Note fields, which the user reviews before generating. It is never sent anywhere as a file, only its text, and only through the same consent and sanitising as notes.
 _Avoid_: Upload, attachment, presentation file
 
 **Item**:

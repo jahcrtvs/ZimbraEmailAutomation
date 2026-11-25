@@ -50,6 +50,12 @@ export function buildPptx({ title, slides, order, method } = {}) {
   return zip(files, { method });
 }
 
+// cells: [{ type: "markdown" | "code", source: string | string[], outputs }]. A notebook is plain JSON.
+export function buildNotebook({ cells, bom = false }) {
+  const json = JSON.stringify({ nbformat: 4, nbformat_minor: 5, metadata: {}, cells: cells.map(c => ({ cell_type: c.type, metadata: {}, source: c.source, ...(c.type === "code" ? { outputs: c.outputs || [], execution_count: null } : {}) })) });
+  return Buffer.from((bom ? "﻿" : "") + json);
+}
+
 // pages: an array of pages, each an array of text lines (an empty page has no text). info: optional document title.
 export function buildPdf({ pages, title }) {
   const objs = [];

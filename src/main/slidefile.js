@@ -11,7 +11,7 @@ export function createSlidePicker({ dialog, getWindow, fs = nodeFs }) {
       title: "Choose a presentation",
       properties: ["openFile"],
       // .ppt is listed so the user gets the message that says why it cannot be read.
-      filters: [{ name: "Presentations", extensions: ["pptx", "pdf", "ppt"] }]
+      filters: [{ name: "Presentations and notebooks", extensions: ["pptx", "pdf", "ipynb", "ppt"] }]
     });
     const file = r.canceled ? null : r.filePaths[0];
     if (!file) return null;

@@ -115,6 +115,46 @@ async function readPdf(buf) {
   }
 }
 
+const FENCE = /^\s*(```|~~~)/;
+const HEADING = /^\s{0,3}(#{1,6})(?:\s+(.*))?$/;
+const RULE = /^\s*([-*_])(\s*\1){2,}\s*$/;
+const markdownText = s => clean(decode(s
+  .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+  .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+  .replace(/<[^>]*>/g, "")
+  .replace(/[*`]+|~~/g, "")
+  .replace(/(^|\s)_+|_+(?=\s|$)/g, "$1")));
+
+// Only the markdown cells: code and its output can hold real data and say little about what was taught.
+// Each heading starts a slide, and the text under it, in any later markdown cell, is its lines.
+function readNotebook(buf) {
+  const nb = JSON.parse(buf.toString("utf8").replace(/^﻿/, ""));
+  if (!Array.isArray(nb?.cells)) throw unreadable();
+  const all = [{ title: "", lines: [] }];
+  let docTitle = "";
+  for (const cell of nb.cells) {
+    if (cell?.cell_type !== "markdown") continue;
+    const source = Array.isArray(cell.source) ? cell.source.join("") : cell.source;
+    if (typeof source !== "string") continue;
+    let fenced = false;
+    for (const line of source.split(/\r?\n/)) {
+      if (FENCE.test(line)) { fenced = !fenced; continue; }
+      if (fenced) continue;
+      const h = line.match(HEADING);
+      if (h) {
+        const title = markdownText((h[2] ?? "").replace(/\s+#+\s*$/, ""));
+        if (h[1].length === 1 && !docTitle) docTitle = title;
+        all.push({ title, lines: [] });
+        continue;
+      }
+      if (RULE.test(line)) continue;
+      const text = markdownText(line.replace(/^(\s*>)+\s*/, "").replace(/^\s*(?:[-*+]|\d+[.)])\s+/, "").replace(/^\[[ xX]\]\s+/, ""));
+      if (text) all.at(-1).lines.push(text);
+    }
+  }
+  return { title: docTitle, slides: all.filter(s => s.title || s.lines.length).slice(0, MAX_SLIDES) };
+}
+
 // Called with the file size before the file is read into memory, and again on the buffer.
 export function checkSize(bytes) {
   if (bytes > MAX_FILE_BYTES) throw fail("TOO_BIG", `This file is larger than ${MAX_FILE_BYTES / 1024 / 1024} MB.`);
@@ -124,11 +164,12 @@ export function checkSize(bytes) {
 export async function readDeck(buffer, ext) {
   const type = String(ext || "").toLowerCase().replace(/^\./, "");
   if (type === "ppt") throw fail("UNSUPPORTED", "Old .ppt files cannot be read. Save it as .pptx or PDF in PowerPoint first.");
-  if (type !== "pptx" && type !== "pdf") throw fail("UNSUPPORTED", "Choose a .pptx or .pdf file.");
+  if (!["pptx", "pdf", "ipynb"].includes(type)) throw fail("UNSUPPORTED", "Choose a .pptx, .pdf or .ipynb file.");
   checkSize(buffer.length);
   let deck;
-  try { deck = type === "pptx" ? readPptx(buffer) : await readPdf(buffer); }
+  try { deck = type === "pptx" ? readPptx(buffer) : type === "pdf" ? await readPdf(buffer) : readNotebook(buffer); }
   catch (e) { throw e.name === "DeckError" ? e : unreadable(); }
-  if (!deck.slides.length) throw fail("NO_TEXT", type === "pdf" ? "This PDF has no text to read. It may be a scanned image." : "This presentation has no text to read.");
+  const empty = { pdf: "This PDF has no text to read. It may be a scanned image.", ipynb: "This notebook has no markdown text to read." };
+  if (!deck.slides.length) throw fail("NO_TEXT", empty[type] || "This presentation has no text to read.");
   return deck;
 }

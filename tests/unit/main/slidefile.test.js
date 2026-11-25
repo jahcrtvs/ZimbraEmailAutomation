@@ -15,7 +15,7 @@ describe("createSlidePicker", () => {
     await createSlidePicker({ dialog, getWindow: () => "WINDOW" })();
     expect(dialog.seen[0].win).toBe("WINDOW");
     expect(dialog.seen[0].opts.properties).toEqual(["openFile"]);
-    expect(dialog.seen[0].opts.filters[0].extensions).toEqual(["pptx", "pdf", "ppt"]);
+    expect(dialog.seen[0].opts.filters[0].extensions).toEqual(["pptx", "pdf", "ipynb", "ppt"]);
   });
   it("returns null when the user cancels", async () => {
     expect(await createSlidePicker({ dialog: dialogFor({ canceled: true, filePaths: [] }), getWindow: () => null })()).toBeNull();

@@ -81,7 +81,7 @@ export function ViewModal({s,a}){
 export function SlidesModal({s,a}){
   const {Modal,Button,RadioCard,Banner,Icon}=D();const d=s.slidesDlg;
   const roles=[["attended","I attended it","Someone else gave the presentation."],["presented","I presented it","You gave the presentation."],["studied","I studied it","You went through the slides on your own."]];
-  return <Modal title="Import slides" description="Choose a .pptx or PDF. Its titles and bullet points are sorted into your notes." onClose={a.closeModal} width={480} footer={<><Button variant="ghost" onClick={a.closeModal}>Cancel</Button><Button variant="primary" icon="plus" loading={d.busy&&!!d.file} disabled={!d.file||d.busy} onClick={a.addSlides}>Add to notes</Button></>}>
+  return <Modal title="Import slides" description="Choose a .pptx, PDF or .ipynb file. Its titles and bullet points, or a notebook's markdown headings and text, are sorted into your notes." onClose={a.closeModal} width={480} footer={<><Button variant="ghost" onClick={a.closeModal}>Cancel</Button><Button variant="primary" icon="plus" loading={d.busy&&!!d.file} disabled={!d.file||d.busy} onClick={a.addSlides}>Add to notes</Button></>}>
     <div style={{display:"flex",flexDirection:"column",gap:18}}>
       {d.error&&<Banner tone="danger" title="Nothing was added to your notes.">{d.error}</Banner>}
       <div>

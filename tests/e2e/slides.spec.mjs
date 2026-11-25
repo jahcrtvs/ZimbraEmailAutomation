@@ -2,7 +2,7 @@ import { test, expect, _electron as electron } from "@playwright/test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { buildPptx, buildPdf } from "../unit/main/deckFiles.js";
+import { buildPptx, buildPdf, buildNotebook } from "../unit/main/deckFiles.js";
 
 // A fresh folder would show the first-run tutorial over the page, so it is marked as already seen.
 // DD_SLIDES_FILE answers the file dialog. The AI is off in tests, so the built-in rules sort the slides.
@@ -40,6 +40,23 @@ test("import a .pdf reads the text with pdf.js in the built app", async () => {
   await w.getByRole("button", { name: "Add to notes" }).click();
   await expect(w.getByLabel("Today's Work")).toHaveValue("Attended the presentation on Spring Security");
   await expect(w.getByLabel("Topics / Lessons")).toHaveValue("Authentication\nRoles");
+  await app.close();
+});
+
+test("import a .ipynb fills the notes from its markdown and never from its code", async () => {
+  const nb = buildNotebook({ cells: [
+    { type: "markdown", source: "# Spring Data JPA\nDay 3" },
+    { type: "markdown", source: "## Repositories\n- Save methods" },
+    { type: "code", source: "password = 'hunter2'", outputs: [{ output_type: "stream", name: "stdout", text: "hunter2\n" }] },
+    { type: "markdown", source: "## Derived queries" }
+  ] });
+  const { app, w } = await open("Spring Data JPA.ipynb", nb);
+  await expect(w.getByText("Spring Data JPA.ipynb")).toBeVisible();
+  await expect(w.getByText("3 slides")).toBeVisible();
+  await w.getByRole("button", { name: "Add to notes" }).click();
+  await expect(w.getByLabel("Today's Work")).toHaveValue("Attended the presentation on Spring Data JPA");
+  await expect(w.getByLabel("Topics / Lessons")).toHaveValue("Repositories\nDerived queries");
+  for (const label of ["Today's Work", "Topics / Lessons", "Tomorrow"]) await expect(w.getByLabel(label)).not.toHaveValue(/hunter2/);
   await app.close();
 });
 

@@ -172,6 +172,11 @@ describe("SlidesModal", () => {
   const dlg = (over = {}) => ({ role: "attended", file: null, busy: false, error: null, ...over });
   const a = () => ({ closeModal: vi.fn(), pickSlides: vi.fn(), addSlides: vi.fn(), setSlidesRole: vi.fn() });
 
+  it("says a .pptx, a PDF or a notebook can be chosen", () => {
+    render(<SlidesModal s={{ slidesDlg: dlg() }} a={a()} />);
+    expect(screen.getByText(/\.pptx, PDF or \.ipynb/)).toBeTruthy();
+    expect(screen.getByText(/notebook's markdown/)).toBeTruthy();
+  });
   it("offers the three roles and marks the chosen one", () => {
     render(<SlidesModal s={{ slidesDlg: dlg({ role: "presented" }) }} a={a()} />);
     expect(screen.getByRole("radio", { name: /I attended it/ }).getAttribute("aria-checked")).toBe("false");

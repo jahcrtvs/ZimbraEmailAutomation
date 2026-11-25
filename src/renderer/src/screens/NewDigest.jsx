@@ -7,11 +7,12 @@ import { PROVIDER_NAMES } from "@shared/ai.js";
 const D = () => DS;const NOTE_LABELS={work:"Today's Work",topics:"Topics / Lessons",progress:"Still Working On",blockers:"Blockers",tomorrow:"Tomorrow"};
 export const lbl={font:"500 12px/1.2 var(--font-sans)",color:"var(--fg-2)",marginBottom:6};
 function InputPane({s,a}){
-  const {Textarea,Button,DatePicker}=D();const n=s.notes,busy=s.stage==="generating";const set=k=>v=>a.setNotes({...n,[k]:v});
+  const {Textarea,Button,DatePicker,Banner}=D();const n=s.notes,busy=s.stage==="generating";const set=k=>v=>a.setNotes({...n,[k]:v});
   const empty=!Object.values(n).some(v=>v.trim());
   return <div style={{display:"flex",flexDirection:"column",height:"100%",minHeight:0}}>
     <div style={{flex:1,overflowY:"auto",padding:"20px 28px",display:"flex",flexDirection:"column",gap:14,opacity:busy?.5:1,pointerEvents:busy?"none":"auto"}}>
       <p style={{margin:0,font:"500 15px/1.3 var(--font-sans)",color:"var(--fg-1)"}}>What did you work on today?<span style={{display:"block",font:"var(--text-helper)",color:"var(--fg-3)",marginTop:4}}>Rough notes are fine. The report is organized after you generate it.</span></p>
+      {s.slidesNote&&<Banner tone="info" title="Slides added to your notes.">{s.slidesNote}</Banner>}
       <DatePicker label="Digest date" helper="Pick an earlier day to fill in a missed digest." value={s.date} onChange={a.setDate} maxDate={s.today} style={{maxWidth:240}}/>
       <Textarea label="Today's Work" rows={4} autoFocus value={n.work} onChange={set("work")} placeholder={"worked on hibernate\ncriteria query\nfixed duplicates"}/>
       <Textarea label="Topics / Lessons" hint="Optional" rows={2} value={n.topics} onChange={set("topics")} placeholder="What did you study or learn today?"/>
@@ -20,6 +21,7 @@ function InputPane({s,a}){
       <Textarea label="Tomorrow" hint="Optional" rows={2} value={n.tomorrow} onChange={set("tomorrow")} placeholder="What you plan to continue next"/>
     </div>
     <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 28px",borderTop:"1px solid var(--border-subtle)"}}>
+      <Button variant="ghost" size="sm" icon="presentation" onClick={a.openSlides}>Import slides</Button>
       {empty&&<Button variant="ghost" size="sm" icon="copy" onClick={a.fillSample}>Use example notes</Button>}
       <div style={{flex:1}}/>
       <Button variant="primary" size="lg" loading={busy} disabled={empty} kbd={busy?undefined:"Ctrl+↵"} onClick={a.generate}>{busy?"Generating…":"Generate Digest"}</Button>

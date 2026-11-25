@@ -8,6 +8,10 @@ A desktop app that turns a trainee's rough daily notes into a formal status emai
 One of the five boxes the user types rough notes into: Today's Work, Topics / Lessons, Still Working On, Blockers, Tomorrow.
 _Avoid_: Input, category, textbox
 
+**Slide deck**:
+A presentation file (.pptx or PDF) the user imports. Its titles and bullet points are sorted into a draft of the Note fields, which the user reviews before generating. It is never sent anywhere as a file, only its text, and only through the same consent and sanitising as notes.
+_Avoid_: Upload, attachment, presentation file
+
 **Item**:
 One non-empty line in a note field. An item always becomes exactly one sentence; the user presses Enter to make a new item.
 _Avoid_: Bullet, entry, note (as a unit), task

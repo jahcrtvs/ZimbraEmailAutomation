@@ -115,12 +115,17 @@ async function readPdf(buf) {
   }
 }
 
+// Called with the file size before the file is read into memory, and again on the buffer.
+export function checkSize(bytes) {
+  if (bytes > MAX_FILE_BYTES) throw fail("TOO_BIG", `This file is larger than ${MAX_FILE_BYTES / 1024 / 1024} MB.`);
+}
+
 // Reads the text of a presentation. ext is the file extension, with or without the dot.
 export async function readDeck(buffer, ext) {
   const type = String(ext || "").toLowerCase().replace(/^\./, "");
   if (type === "ppt") throw fail("UNSUPPORTED", "Old .ppt files cannot be read. Save it as .pptx or PDF in PowerPoint first.");
   if (type !== "pptx" && type !== "pdf") throw fail("UNSUPPORTED", "Choose a .pptx or .pdf file.");
-  if (buffer.length > MAX_FILE_BYTES) throw fail("TOO_BIG", `This file is larger than ${MAX_FILE_BYTES / 1024 / 1024} MB.`);
+  checkSize(buffer.length);
   let deck;
   try { deck = type === "pptx" ? readPptx(buffer) : await readPdf(buffer); }
   catch (e) { throw e.name === "DeckError" ? e : unreadable(); }

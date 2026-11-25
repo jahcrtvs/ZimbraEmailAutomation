@@ -78,6 +78,34 @@ export function ViewModal({s,a}){
   return <Modal title={"Daily Digest · "+fmt(it.date)} onClose={a.closeModal} width={620} footer={<Button variant="ghost" onClick={a.closeModal}>Close</Button>}>
     <div style={{maxHeight:420,overflowY:"auto"}}><DigestDocument blocks={it.blocks} subject={it.subject||subjectFor(s.settings.email.defaultSubject,it.date,s.settings.email.dateFormat)} to={it.to}/></div></Modal>;
 }
+export function SlidesModal({s,a}){
+  const {Modal,Button,RadioCard,Banner,Icon}=D();const d=s.slidesDlg;
+  const roles=[["attended","I attended it","Someone else gave the presentation."],["presented","I presented it","You gave the presentation."],["studied","I studied it","You went through the slides on your own."]];
+  return <Modal title="Import slides" description="Choose a .pptx or PDF. Its titles and bullet points are sorted into your notes." onClose={a.closeModal} width={480} footer={<><Button variant="ghost" onClick={a.closeModal}>Cancel</Button><Button variant="primary" icon="plus" loading={d.busy&&!!d.file} disabled={!d.file||d.busy} onClick={a.addSlides}>Add to notes</Button></>}>
+    <div style={{display:"flex",flexDirection:"column",gap:18}}>
+      {d.error&&<Banner tone="danger" title="Nothing was added to your notes.">{d.error}</Banner>}
+      <div>
+        <div style={lbl}>Presentation</div>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <Button variant="outline" icon="folder-open" disabled={d.busy} onClick={a.pickSlides}>{d.file?"Choose another file":"Choose file…"}</Button>
+          {d.file&&<span style={{display:"flex",alignItems:"center",gap:8,minWidth:0,color:"var(--fg-2)"}}><Icon name="presentation" size={15}/><span style={{overflowWrap:"anywhere",color:"var(--fg-1)"}}>{d.file.fileName}</span><span style={{color:"var(--fg-3)",whiteSpace:"nowrap"}}>{d.file.slides} {d.file.slides===1?"slide":"slides"}</span></span>}
+        </div>
+      </div>
+      <div>
+        <div style={lbl}>What did you do with it?</div>
+        <div role="radiogroup" aria-label="What did you do with it?" style={{display:"flex",flexDirection:"column",gap:8}}>
+          {roles.map(([id,title,description])=><RadioCard key={id} checked={d.role===id} onChange={()=>a.setSlidesRole(id)} title={title} description={description}/>)}
+        </div>
+      </div>
+    </div>
+  </Modal>;
+}
+export function SlidesConsentDialog({s,a}){
+  const {ConfirmDialog}=D();const c=s.slidesAsk,name=PROVIDER_NAMES[c.provider];
+  return <ConfirmDialog tone="warning" icon="triangle-alert" title="The local AI didn't work." description={<>{c.failure?.message} Send the slide text to {name} instead? Only the text below is sent. Emails, links, phone numbers and names are replaced with placeholders first.</>} confirmLabel={"Send to "+name} cancelLabel="Use built-in rules" onConfirm={a.slidesCloudSend} onCancel={a.slidesCloudDecline}>
+    <pre aria-label="Text that would be sent" style={{margin:"12px 0 0",maxHeight:200,overflow:"auto",padding:12,borderRadius:"var(--radius-md)",background:"var(--surface-sunken)",border:"1px solid var(--border-subtle)",font:"400 12px/1.5 var(--font-mono)",color:"var(--fg-2)",whiteSpace:"pre-wrap"}}>{c.preview.text}</pre>
+  </ConfirmDialog>;
+}
 export function CloudConsentDialog({s,a}){
   const {ConfirmDialog}=D();const c=s.cloudAsk,name=PROVIDER_NAMES[c.provider];
   return <ConfirmDialog tone="warning" icon="triangle-alert" title="The local AI didn't work." description={<>{c.failure?.message} Send your notes to {name} instead? Only the text below is sent. Emails, links, phone numbers and names are replaced with placeholders first.</>} confirmLabel={"Send to "+name} cancelLabel="Use plain template" onConfirm={a.cloudSend} onCancel={a.cloudDecline}>

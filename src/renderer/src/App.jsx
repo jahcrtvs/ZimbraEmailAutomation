@@ -11,7 +11,7 @@ import { NotificationsScreen } from "./screens/Notifications.jsx";
 import { UpdateBanner, UpdateRequired } from "./screens/UpdateGate.jsx";
 import { Onboarding } from "./screens/Onboarding.jsx";
 import { CrashScreen } from "./screens/CrashScreen.jsx";
-import { ScheduleModal, SendModal, PrepareModal, LoginModal, ZimbraErrorDialog, ZimbraStatusModal, ConfirmCancel, ConfirmRegen, MissedDialog, ViewModal, CloudConsentDialog } from "./screens/dialogs.jsx";
+import { ScheduleModal, SendModal, PrepareModal, LoginModal, ZimbraErrorDialog, ZimbraStatusModal, ConfirmCancel, ConfirmRegen, MissedDialog, ViewModal, CloudConsentDialog, SlidesModal, SlidesConsentDialog } from "./screens/dialogs.jsx";
 
 export function App() {
   const { s, a, ready, bootError } = useApp();
@@ -44,6 +44,8 @@ export function App() {
       {mt === "missed" && <MissedDialog s={s} a={a} />}
       {mt === "view" && <ViewModal s={s} a={a} />}
       {mt === "cloud" && s.cloudAsk && <CloudConsentDialog s={s} a={a} />}
+      {mt === "slides" && s.slidesDlg && <SlidesModal s={s} a={a} />}
+      {mt === "slidesCloud" && s.slidesAsk && <SlidesConsentDialog s={s} a={a} />}
       {s.tour != null && <Onboarding step={s.tour} a={a} />}
       {s.update?.state === "optional" && !s.updateDismissed && <UpdateBanner update={s.update} a={a} />}
       {s.update?.state === "required" && <UpdateRequired update={s.update} a={a} />}

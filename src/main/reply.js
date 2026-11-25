@@ -48,7 +48,7 @@ export function exampleExchange(examples) {
   return [{ role: "user", content: "Notes:\n" + notesText(notes) }, { role: "assistant", content: JSON.stringify(reply) }];
 }
 
-export function parseReply(text, name = "Gemini") {
+export function parseReply(text, name = "Gemini", keys = SECTION_KEYS) {
   const cleaned = String(text).trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
   let obj;
   try { obj = JSON.parse(cleaned); }
@@ -58,7 +58,7 @@ export function parseReply(text, name = "Gemini") {
     catch { throw new Error(`${name} returned an unexpected response: not valid JSON`); }
   }
   const out = {};
-  for (const k of SECTION_KEYS) {
+  for (const k of keys) {
     // An entry may be a plain string or {note, sentence}; the note only anchors the model to its item.
     const v = (obj?.[k] ?? []);
     if (Array.isArray(v)) for (let i = 0; i < v.length; i++) if (v[i] && typeof v[i] === "object" && typeof v[i].sentence === "string") v[i] = v[i].sentence;

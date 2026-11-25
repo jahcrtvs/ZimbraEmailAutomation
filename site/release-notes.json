@@ -42,5 +42,9 @@
   ],
   "1.5.0": [
     { "type": "feat", "text": "A short tutorial shows you how to use Daily Digest the first time you open it. Show it again any time from Settings." }
+  ],
+  "1.5.1": [
+    { "type": "feat", "text": "Import slides: choose a .pptx, PDF or Jupyter notebook and its topics are sorted into your notes for you to review before you generate." },
+    { "type": "feat", "text": "Notebook import reads only the markdown text, never the code or its output." }
   ]
 }

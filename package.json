@@ -1,6 +1,6 @@
 {
   "name": "daily-digest",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Daily Digest",
   "license": "GPL-3.0-only",
   "main": "out/main/index.js",

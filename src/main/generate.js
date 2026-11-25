@@ -78,6 +78,15 @@ export function createGenerator({ getKey, fetchImpl = fetch, sleep = realSleep, 
     }
   }
 
+  // Ollama is installed but not running: start it and ask once more.
+  async function localReply(ai, request) {
+    try { return await runLocal(request); }
+    catch (e) {
+      if (e.code !== "UNREACHABLE" || !(await startLocal(ai.local))) throw e;
+      return runLocal(request);
+    }
+  }
+
   const cloudFor = ai => { const p = ai.fallback?.provider; return CLOUD[p] && getKey(p) ? p : null; };
 
   async function generate({ notes, template, profile, date, dateFormat, ai, mode = "auto", history = [], onProgress }) {
@@ -105,14 +114,7 @@ export function createGenerator({ getKey, fetchImpl = fetch, sleep = realSleep, 
           text: "Notes:\n" + notesText(s ? s.notes : notes),
           onSentence: onProgress && ((section, sentence) => onProgress({ section, sentence: back(sentence) }))
         };
-        let reply;
-        try { reply = await runLocal(request); }
-        catch (e) {
-          // Ollama is installed but not running: start it and ask once more.
-          if (e.code !== "UNREACHABLE" || !(await startLocal(ai.local))) throw e;
-          reply = await runLocal(request);
-        }
-        const { partial, ...raw } = reply;
+        const { partial, ...raw } = await localReply(ai, request);
         for (const k of Object.keys(raw)) raw[k] = raw[k].map(back);
         const { parsed, fallbacks, total } = applyChecks({ items, parsed: raw, builtIn: vars, partial: !!partial });
         if (total && fallbacks === total) return plain("The local AI's sentences could not be used, so the built-in text rules were used.");
@@ -170,13 +172,7 @@ export function createGenerator({ getKey, fetchImpl = fetch, sleep = realSleep, 
           system: s ? LOCAL_SORT_PROMPT + KEEP_PLACEHOLDERS : LOCAL_SORT_PROMPT,
           text: "Slides:\n" + (s ? s.notes.topics : text)
         };
-        let reply;
-        try { reply = await runLocal(request); }
-        catch (e) {
-          if (e.code !== "UNREACHABLE" || !(await startLocal(ai.local))) throw e;
-          reply = await runLocal(request);
-        }
-        return accept(reply, "local", t => s ? restore(t, s.map) : t);
+        return accept(await localReply(ai, request), "local", t => s ? restore(t, s.map) : t);
       } catch (e) { failure = { code: e.code || "UNKNOWN", message: e.message }; }
     }
 

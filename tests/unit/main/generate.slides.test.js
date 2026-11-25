@@ -46,14 +46,14 @@ const userText = c => c.body.messages.at(-1).content;
 describe("sortSlides: local AI", () => {
   it("fills topics and stated items from the local model and writes Today's Work itself", async () => {
     const r = await sort(gen());
-    expect(r).toEqual({ status: "ok", source: "local", note: null, draft: { work: WORK, topics: GOOD.topics, progress: [], blockers: [], tomorrow: ["Practice JWT login"] } });
+    expect(r).toEqual({ status: "ok", source: "local", note: null, draft: { work: WORK, topics: GOOD.topics, tomorrow: ["Practice JWT login"] } });
     expect(calls).toHaveLength(1);
     expect(entries).toEqual([]);
   });
   it("never fills Still Working On or Blockers, even when the model returns items for them", async () => {
     const r = await sort(gen({ local: () => chat({ ...GOOD, progress: ["Authentication"], blockers: ["Roles and method security"] }) }));
-    expect(r.draft.progress).toEqual([]);
-    expect(r.draft.blockers).toEqual([]);
+    expect(r.draft).not.toHaveProperty("progress");
+    expect(r.draft).not.toHaveProperty("blockers");
     expect(r.draft.topics).toEqual(GOOD.topics);
     expect(r.note).toBeNull();
   });

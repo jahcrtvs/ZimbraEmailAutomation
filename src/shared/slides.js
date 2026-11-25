@@ -14,7 +14,6 @@ const GENERIC = /^(agenda|outline|summary|homework|q\s*&\s*a|questions?(\s+and\s
 export const isGenericTitle = title => GENERIC.test(title);
 
 export const titleKey = s => s.trim().toLowerCase().replace(/\s+/g, " ");
-const key = titleKey;
 const nameOf = file => String(file || "").split(/[\\/]/).pop().replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
 
 // What the app can write without any AI: the user's part, and the slide titles as topics.
@@ -22,15 +21,15 @@ export function builtInDraft(deck, role, fileName = "") {
   if (!WORK[role]) throw new Error("Unknown role.");
   const title = deck.title?.trim() || nameOf(fileName);
   // The title slide repeats the deck title, so the deck title counts as already listed.
-  const seen = new Set(title ? [key(title)] : []);
+  const seen = new Set(title ? [titleKey(title)] : []);
   const topics = [];
   for (const s of deck.slides) {
     const t = s.title?.trim();
-    if (!t || isGenericTitle(t) || seen.has(key(t))) continue;
-    seen.add(key(t));
+    if (!t || isGenericTitle(t) || seen.has(titleKey(t))) continue;
+    seen.add(titleKey(t));
     topics.push(t);
   }
-  return { work: [WORK[role](title)], topics: topics.slice(0, MAX_TOPICS), progress: [], blockers: [], tomorrow: [] };
+  return { work: [WORK[role](title)], topics: topics.slice(0, MAX_TOPICS), tomorrow: [] };
 }
 
 // Adds the draft below what the user already typed. Nothing typed is changed or removed, and an item

@@ -66,8 +66,8 @@ describe("builtInDraft: Topics / Lessons", () => {
     expect(topics[0]).toBe("Topic 1");
     expect(topics[MAX_TOPICS - 1]).toBe("Topic " + MAX_TOPICS);
   });
-  it("fills only Today's Work and Topics / Lessons, and has every note field", () => {
-    expect(builtInDraft(deck("Deck", "Roles"), "studied")).toEqual({ work: ["Studied the presentation on Deck"], topics: ["Roles"], progress: [], blockers: [], tomorrow: [] });
+  it("fills only Today's Work and Topics / Lessons, and an empty Tomorrow", () => {
+    expect(builtInDraft(deck("Deck", "Roles"), "studied")).toEqual({ work: ["Studied the presentation on Deck"], topics: ["Roles"], tomorrow: [] });
   });
 });
 

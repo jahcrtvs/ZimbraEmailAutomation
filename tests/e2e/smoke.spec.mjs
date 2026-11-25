@@ -5,7 +5,12 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const launch = dir => electron.launch({ args: ["."], env: { ...process.env, DD_TEST: "1", DD_USER_DATA: dir } });
-const fresh = () => fs.mkdtempSync(path.join(os.tmpdir(), "dd-e2e-"));
+// A fresh folder would show the first-run tutorial over the page, so mark it as already seen.
+const fresh = () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dd-e2e-"));
+  fs.writeFileSync(path.join(dir, "settings.json"), JSON.stringify({ app: { onboarded: true } }));
+  return dir;
+};
 
 test("generate → review → send now → I've Sent It → History", async () => {
   const dir = fresh();
